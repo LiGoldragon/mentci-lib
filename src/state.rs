@@ -21,9 +21,11 @@ use signal::{
 use crate::canvas::{CanvasState, CanvasView, KindCanvasState};
 use crate::cmd::Cmd;
 use crate::connection::{ConnectionState, ConnectionView, DaemonStatus};
-use crate::constructor::ActiveConstructor;
+use crate::constructor::{
+    ActiveConstructor, ConstructorView, NewNodeFlow, NewNodeView,
+};
 use crate::diagnostics::DiagnosticsState;
-use crate::event::{EngineEvent, UserEvent};
+use crate::event::{ConstructorField, EngineEvent, UserEvent};
 use crate::inspector::{InspectorState, InspectorView};
 use crate::layout::LayoutState;
 use crate::theme::ThemeState;
@@ -138,7 +140,7 @@ impl WorkbenchState {
             },
             diagnostics: None,
             wire: None,
-            constructor: None,
+            constructor: self.active_constructor.as_ref().map(constructor_view_for),
         }
     }
 
@@ -218,6 +220,46 @@ impl WorkbenchState {
                 self.inspector.focused = Some(slot);
                 Vec::new()
             }
+            UserEvent::OpenNewNodeFlow => {
+                // The constructor needs *some* graph context;
+                // pick the focused one (or the first cached
+                // graph as a fallback). If neither exists, the
+                // gesture is a no-op until the user selects a
+                // graph.
+                let graph_slot = self.canvas.focus.or_else(|| {
+                    self.cache.graphs.first().map(|(s, _)| *s)
+                });
+                if let Some(graph) = graph_slot {
+                    self.active_constructor = Some(ActiveConstructor::NewNode(NewNodeFlow {
+                        graph,
+                        at_x: 0.0,
+                        at_y: 0.0,
+                        kind_choice: None,
+                        display_name_input: String::new(),
+                    }));
+                }
+                Vec::new()
+            }
+            UserEvent::ConstructorFieldChanged { field } => {
+                if let Some(ActiveConstructor::NewNode(flow)) =
+                    self.active_constructor.as_mut()
+                {
+                    if let ConstructorField::Text { field_name, value } = field {
+                        if field_name == "name" {
+                            flow.display_name_input = value;
+                        }
+                    }
+                }
+                Vec::new()
+            }
+            UserEvent::ConstructorCommit => {
+                let cmd = self.commit_active_constructor();
+                cmd.into_iter().collect()
+            }
+            UserEvent::ConstructorCancel => {
+                self.active_constructor = None;
+                Vec::new()
+            }
             UserEvent::ReconnectCriome => vec![Cmd::ConnectCriome],
             UserEvent::ReconnectNexus => vec![Cmd::ConnectNexus],
             // Every other event is unhandled in this skeleton
@@ -282,6 +324,43 @@ impl WorkbenchState {
             // skeleton pass; bodies fill in as the wire wires
             // up.
             _ => Vec::new(),
+        }
+    }
+
+    /// Commit whatever constructor is active. Closes the flow
+    /// and returns a Cmd that sends the appropriate Assert /
+    /// Mutate / Retract frame to criome. After the engine's
+    /// outcome arrives, the canvas re-queries; the new record
+    /// shows up in the cache and the view paints it.
+    fn commit_active_constructor(&mut self) -> Option<Cmd> {
+        let active = self.active_constructor.take()?;
+        match active {
+            ActiveConstructor::NewNode(flow) => {
+                if flow.display_name_input.is_empty() {
+                    // Empty name — keep the flow open by
+                    // restoring it. The shell could surface a
+                    // hint; the model just refuses to commit.
+                    self.active_constructor =
+                        Some(ActiveConstructor::NewNode(flow));
+                    return None;
+                }
+                let assert = signal::AssertOperation::Node(signal::Node {
+                    name: flow.display_name_input,
+                });
+                let frame = Frame {
+                    principal_hint: Some(self.principal),
+                    auth_proof: Some(AuthProof::SingleOperator),
+                    body: Body::Request(Request::Assert(assert)),
+                };
+                Some(Cmd::SendCriome { frame })
+            }
+            // Other constructor flows commit when their bodies
+            // wire up. Putting them back into the slot avoids
+            // dropping in-progress state.
+            other => {
+                self.active_constructor = Some(other);
+                None
+            }
         }
     }
 
@@ -361,5 +440,44 @@ fn build_flow_graph_view(
         nodes: rendered_nodes,
         edges: rendered_edges,
         pending_wire: None,
+    }
+}
+
+/// Project the active constructor into its renderable view.
+fn constructor_view_for(active: &ActiveConstructor) -> ConstructorView {
+    match active {
+        ActiveConstructor::NewNode(flow) => ConstructorView::NewNode(NewNodeView {
+            // Concrete kind choices come from the schema layer
+            // when it lands. For the first runnable: a single
+            // "Node" placeholder so commit can fire.
+            kind_choices: vec!["Node".to_string()],
+            kind_choice: flow.kind_choice.clone(),
+            display_name_input: flow.display_name_input.clone(),
+            commit_enabled: !flow.display_name_input.is_empty(),
+        }),
+        ActiveConstructor::NewEdge(flow) => ConstructorView::NewEdge(crate::constructor::NewEdgeView {
+            from_label: format!("slot {}", u64::from(flow.from)),
+            to_label: format!("slot {}", u64::from(flow.to)),
+            kind_choices: Vec::new(),
+            kind_choice: flow.kind_choice,
+            description_input: flow.description_input.clone(),
+            commit_enabled: flow.kind_choice.is_some(),
+        }),
+        ActiveConstructor::Rename(flow) => ConstructorView::Rename(crate::constructor::RenameView {
+            slot_label: format!("slot {}", u64::from(flow.slot)),
+            current_name: flow.current_name.clone(),
+            new_name: flow.new_name.clone(),
+            commit_enabled: flow.new_name != flow.current_name && !flow.new_name.is_empty(),
+        }),
+        ActiveConstructor::Retract(flow) => ConstructorView::Retract(crate::constructor::RetractView {
+            slot_label: format!("slot {}", u64::from(flow.slot)),
+            references_count: flow.references_in.len() + flow.references_out.len(),
+            warning: None,
+            commit_enabled: true,
+        }),
+        ActiveConstructor::Batch(flow) => ConstructorView::Batch(crate::constructor::BatchView {
+            op_count: flow.ops.len(),
+            commit_enabled: !flow.ops.is_empty(),
+        }),
     }
 }

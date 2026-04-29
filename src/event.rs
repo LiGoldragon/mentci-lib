@@ -20,6 +20,10 @@ pub enum UserEvent {
     UnpinSlot { slot: Slot },
 
     // ── canvas: flow-graph gestures ────────────────────────
+    /// Open the new-node constructor flow. Triggered by an
+    /// explicit "+ node" affordance for now; drag-to-create
+    /// lands as a richer gesture in a later iteration.
+    OpenNewNodeFlow,
     /// Begin dragging a new box onto the canvas. Position +
     /// kind picked from the palette.
     BeginDragNewBox { graph: Slot, kind: NodeKindHint, at: CanvasPos },
@@ -154,11 +158,12 @@ pub struct NodeKindHint {
     pub name: String,
 }
 
-/// A field-change event during a constructor flow. Variant
-/// shape is per-flow.
+/// A field-change event during a constructor flow. The
+/// `field_name` namespaces it per pane; the active flow knows
+/// which fields it owns.
 #[derive(Debug, Clone)]
 pub enum ConstructorField {
-    /// Generic placeholder — concrete variants land per flow.
+    /// Free-text input.
     Text { field_name: String, value: String },
     /// Selection from a closed-enum variant list.
     EnumChoice { field_name: String, variant: String },
