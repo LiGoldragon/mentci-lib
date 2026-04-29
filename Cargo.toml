@@ -16,3 +16,10 @@ tokio     = { version = "1", features = ["rt-multi-thread", "net", "sync", "io-u
 [lints.rust]
 unused = "allow"
 dead_code = "allow"
+
+# End-to-end verification binary — exercises mentci-lib against
+# a live criome-daemon. Used by the workspace-level Nix test
+# `mentci/checks/scenario-mentci-lib-handshake.nix`.
+[[bin]]
+name = "mentci-handshake-test"
+path = "examples/handshake.rs"
