@@ -60,16 +60,16 @@ pub struct WorkbenchState {
 /// and (eventually) `SubscriptionPush`. Read by `view()` when
 /// composing pane views.
 ///
-/// The wire shape today (`signal::Records::*`) carries typed
-/// `Vec<Kind>` without per-record slot annotations. Once
-/// records-with-slots is a real wire shape, this cache holds
-/// `(Slot, Kind)` pairs so the navigation pane can identify
-/// records by slot rather than by vec-position.
+/// Each record is stored with its sema slot — the typed wire
+/// shape (`signal::Records::*`) now carries `Vec<(Slot, Kind)>`
+/// per criome's records-with-slots rollout. That slot is the
+/// real cross-record identity; edge endpoints can be resolved
+/// to specific Node entries by slot lookup.
 #[derive(Default)]
 pub struct ModelCache {
-    pub graphs: Vec<Graph>,
-    pub nodes: Vec<Node>,
-    pub edges: Vec<Edge>,
+    pub graphs: Vec<(Slot, Graph)>,
+    pub nodes: Vec<(Slot, Node)>,
+    pub edges: Vec<(Slot, Edge)>,
 }
 
 impl ModelCache {
@@ -82,6 +82,12 @@ impl ModelCache {
             Records::Node(n) => self.nodes = n,
             Records::Edge(e) => self.edges = e,
         }
+    }
+
+    /// Find the position of a Node by slot. `O(n)` for now —
+    /// indexed lookups land if profiling demands.
+    pub fn node_position_by_slot(&self, slot: Slot) -> Option<usize> {
+        self.nodes.iter().position(|(s, _)| *s == slot)
     }
 }
 
@@ -141,17 +147,18 @@ impl WorkbenchState {
         match &self.canvas.kind_state {
             KindCanvasState::Empty => CanvasView::Empty,
             KindCanvasState::FlowGraph(_kstate) => {
-                // The selected Graph's identity. The cache
-                // entry is found by the synthetic vec-position
-                // slot encoded into focus; this matches what
-                // graphs_nav_view emits.
                 let focus = match self.canvas.focus {
                     Some(s) => s,
                     None => return CanvasView::Empty,
                 };
-                let focus_idx: u64 = focus.into();
-                let graph = match self.cache.graphs.get(focus_idx as usize) {
-                    Some(g) => g.clone(),
+                let graph = match self
+                    .cache
+                    .graphs
+                    .iter()
+                    .find(|(s, _)| *s == focus)
+                    .map(|(_, g)| g.clone())
+                {
+                    Some(g) => g,
                     None => return CanvasView::Empty,
                 };
                 let view = build_flow_graph_view(graph, &self.cache);
@@ -160,19 +167,16 @@ impl WorkbenchState {
         }
     }
 
-    /// Build the GraphsNav pane view from the cache. Until
-    /// records-with-slots lands, the slot field is synthetic
-    /// (vec-position cast to u64) — display is correct;
-    /// selection-by-slot would round-trip wrong, so the shell
-    /// must not assume the slot is durable.
+    /// Build the GraphsNav pane view from the cache. Each
+    /// entry carries the record's real sema slot; selection
+    /// round-trips correctly to the engine.
     fn graphs_nav_view(&self) -> GraphsNavView {
         let graphs = self
             .cache
             .graphs
             .iter()
-            .enumerate()
-            .map(|(idx, g)| GraphsNavEntry {
-                slot: Slot::from(idx as u64),
+            .map(|(slot, g)| GraphsNavEntry {
+                slot: *slot,
                 display_name: g.title.clone(),
                 kind: GraphsNavKind::Graph,
             })
@@ -299,15 +303,11 @@ impl WorkbenchState {
 /// Compose a [`crate::canvas::flow_graph::FlowGraphView`]
 /// from one Graph and the workbench cache.
 ///
-/// Until records-with-slots lands on the wire, edge endpoints
-/// can't be resolved to specific Node records — `Edge.from`
-/// and `Edge.to` are sema slots, while cached Nodes only carry
-/// synthetic vec-position slots. For the first-paint cycle
-/// the renderer paints every cached Node in a deterministic
-/// horizontal row and lays out edges by hashing their
-/// `from`/`to` slots into row positions. Visual placeholder;
-/// the real layout uses NodePlacement records once they're
-/// flowing through the wire.
+/// Each cached Node carries its real sema slot; each cached
+/// Edge's `from`/`to` slots resolve to specific cached Nodes
+/// via slot lookup. The horizontal-grid layout is the
+/// first-paint placeholder until `NodePlacement` records flow
+/// through the wire.
 fn build_flow_graph_view(
     graph: signal::Graph,
     cache: &ModelCache,
@@ -326,11 +326,11 @@ fn build_flow_graph_view(
         .nodes
         .iter()
         .enumerate()
-        .map(|(i, n)| {
+        .map(|(i, (slot, n))| {
             let col = (i % nodes_per_row) as f32;
             let row = (i / nodes_per_row) as f32;
             RenderedNode {
-                slot: signal::Slot::from(i as u64),
+                slot: *slot,
                 at: (origin_x + col * cell_w, origin_y + row * cell_h),
                 kind_glyph: KindGlyph::Unknown,
                 state_intent: NodeStateIntent::Stable,
@@ -339,24 +339,20 @@ fn build_flow_graph_view(
         })
         .collect();
 
-    // Map edge endpoint slots into the row of rendered nodes
-    // by modular indexing. Honest fallback until slot wire
-    // shape ships.
-    let n = rendered_nodes.len().max(1) as u64;
+    // Edge endpoints now reference real sema slots; resolution
+    // is direct cache lookup. Edges whose endpoints aren't in
+    // the cached node set are rendered with their slot
+    // unchanged — the paint layer drops them when the lookup
+    // fails.
     let rendered_edges: Vec<RenderedEdge> = cache
         .edges
         .iter()
-        .enumerate()
-        .map(|(i, e)| {
-            let from_u: u64 = e.from.into();
-            let to_u: u64 = e.to.into();
-            RenderedEdge {
-                slot: signal::Slot::from(i as u64),
-                from: signal::Slot::from(from_u % n),
-                to: signal::Slot::from(to_u % n),
-                relation_intent: e.kind,
-                state_intent: EdgeStateIntent::Stable,
-            }
+        .map(|(slot, e)| RenderedEdge {
+            slot: *slot,
+            from: e.from,
+            to: e.to,
+            relation_intent: e.kind,
+            state_intent: EdgeStateIntent::Stable,
         })
         .collect();
 
