@@ -5,8 +5,8 @@
 //! One driver per daemon. Each shell holds two:
 //! [`DaemonRole::Criome`] and [`DaemonRole::Nexus`]. The
 //! driver task runs on a tokio runtime owned by the shell;
-//! mentci-lib provides the dialing + state-machine logic, the
-//! shell provides the runtime.
+//! mentci-lib provides the dialing + handshake + frame-I/O
+//! state machine, the shell provides the runtime.
 //!
 //! Lifecycle of a driver:
 //!
@@ -14,29 +14,36 @@
 //!    containing a `events_rx` (engine events flowing OUT to
 //!    the shell) and a `cmds_tx` (driver commands flowing IN
 //!    from the shell).
-//! 2. Connect — the task tries to open the UDS. On success it
-//!    emits [`crate::EngineEvent::CriomeConnected`] /
-//!    [`crate::EngineEvent::NexusConnected`]. On failure it
-//!    emits the corresponding `*Disconnected` event with the
+//! 2. Connect — the task tries to open the UDS. On failure it
+//!    emits the appropriate `*Disconnected` event with the
 //!    error text and the loop exits.
-//! 3. Run — the task loops, awaiting either an inbound frame
-//!    on the socket or a [`DriverCmd`] from the shell. Frames
-//!    become engine events; commands become writes.
-//! 4. Disconnect — when the shell drops the
-//!    [`ConnectionHandle`], `cmds_tx` closes and the task
-//!    exits, emitting a final `*Disconnected` event before
-//!    returning.
-//!
-//! This module owns dialing + the loop shape. The handshake
-//! body and frame I/O are skeleton-as-design today; real
-//! wire work lands as criome and nexus-daemon's signal
-//! servers are exercised end-to-end.
+//! 3. Handshake — sends a `Request::Handshake` frame, awaits
+//!    `Reply::HandshakeAccepted` (or `HandshakeRejected`). On
+//!    accept, emits the corresponding `*Connected` event with
+//!    the server's protocol version. On reject or any error,
+//!    emits a `*Disconnected` event.
+//! 4. Run — the task `tokio::select!`s between reading the
+//!    next inbound frame and receiving a [`DriverCmd`] from
+//!    the shell. Inbound frames become engine events; outbound
+//!    cmds become writes.
+//! 5. Disconnect — when the shell drops the
+//!    [`ConnectionHandle`] (or the socket errors), the task
+//!    exits, emitting a final `*Disconnected` event with the
+//!    reason.
 
 use std::path::PathBuf;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::UnixStream;
 use tokio::runtime::Handle;
 use tokio::sync::mpsc;
 
+use signal::{
+    Body, Frame, HandshakeRequest, OutcomeMessage, Records, Reply, Request,
+    SIGNAL_PROTOCOL_VERSION,
+};
+
+use crate::event::FrameDirection;
 use crate::EngineEvent;
 
 /// Which daemon this driver targets. Determines which event
@@ -51,7 +58,7 @@ pub enum DaemonRole {
 #[derive(Debug)]
 pub enum DriverCmd {
     /// Send a typed signal frame on the wire.
-    SendFrame(signal::Frame),
+    SendFrame(Frame),
     /// Cleanly close the connection (driver loop exits).
     Disconnect,
 }
@@ -64,7 +71,7 @@ pub struct ConnectionHandle {
 
 /// Spawn a driver task on the supplied tokio runtime. Returns
 /// immediately with a handle. The driver's first action is to
-/// dial the socket.
+/// dial the socket, then exchange a Handshake.
 pub fn spawn_driver(
     runtime: &Handle,
     socket_path: PathBuf,
@@ -83,7 +90,7 @@ async fn driver_loop(
     mut cmds_rx: mpsc::UnboundedReceiver<DriverCmd>,
 ) {
     // ── Dial ───────────────────────────────────────────────
-    let _stream = match UnixStream::connect(&socket_path).await {
+    let stream = match UnixStream::connect(&socket_path).await {
         Ok(s) => s,
         Err(e) => {
             let _ = events_tx.send(disconnect_event(
@@ -93,38 +100,210 @@ async fn driver_loop(
             return;
         }
     };
+    let (mut read_half, mut write_half) = stream.into_split();
 
     // ── Handshake ──────────────────────────────────────────
-    // Real handshake (HandshakeRequest / HandshakeReply with
-    // ProtocolVersion negotiation) lands as the next iteration.
-    // For now: declare a placeholder version so the header
-    // chip transitions disconnected → connected and the user
-    // sees the dial-and-handshake lifecycle on screen.
-    let _ = events_tx.send(connect_event(role, "0.1.0".into()));
+    let handshake_frame = Frame {
+        principal_hint: None,
+        auth_proof: None,
+        body: Body::Request(Request::Handshake(HandshakeRequest {
+            client_version: SIGNAL_PROTOCOL_VERSION,
+            client_name: client_name_for(role),
+        })),
+    };
+    if let Err(e) = write_frame(&mut write_half, &handshake_frame).await {
+        let _ = events_tx.send(disconnect_event(role, format!("send handshake: {e}")));
+        return;
+    }
+    let _ = events_tx.send(EngineEvent::FrameSeen {
+        direction: FrameDirection::Out,
+        frame: handshake_frame,
+    });
+
+    let reply = match read_frame(&mut read_half).await {
+        Ok(f) => f,
+        Err(e) => {
+            let _ = events_tx.send(disconnect_event(
+                role,
+                format!("read handshake reply: {e}"),
+            ));
+            return;
+        }
+    };
+    let _ = events_tx.send(EngineEvent::FrameSeen {
+        direction: FrameDirection::In,
+        frame: reply.clone(),
+    });
+
+    let server_version_str = match reply.body {
+        Body::Reply(Reply::HandshakeAccepted(h)) => format!(
+            "{}.{}.{}",
+            h.server_version.major, h.server_version.minor, h.server_version.patch
+        ),
+        Body::Reply(Reply::HandshakeRejected(reason)) => {
+            let _ = events_tx.send(disconnect_event(
+                role,
+                format!("handshake rejected: {reason:?}"),
+            ));
+            return;
+        }
+        other => {
+            let _ = events_tx.send(disconnect_event(
+                role,
+                format!("expected handshake reply; got {other:?}"),
+            ));
+            return;
+        }
+    };
+    let _ = events_tx.send(connect_event(role, server_version_str));
 
     // ── Run ────────────────────────────────────────────────
-    // Real frame I/O via [`signal::Frame::encode`] /
-    // [`signal::Frame::decode`] over the UDS lands next. For
-    // now: only the command channel is consumed; inbound
-    // frames are not yet read.
+    // Sequential req-id; first post-handshake frame is req#1.
+    // Replies pair to requests by FIFO position on the wire.
+    let mut next_req_id: u64 = 1;
+    let mut next_reply_id: u64 = 1;
     let mut disconnect_reason: Option<String> = None;
-    while let Some(cmd) = cmds_rx.recv().await {
-        match cmd {
-            DriverCmd::Disconnect => {
-                disconnect_reason = Some("disconnect requested".into());
-                break;
+
+    loop {
+        tokio::select! {
+            read_result = read_frame(&mut read_half) => {
+                match read_result {
+                    Ok(frame) => {
+                        let _ = events_tx.send(EngineEvent::FrameSeen {
+                            direction: FrameDirection::In,
+                            frame: frame.clone(),
+                        });
+                        emit_inbound_typed(&events_tx, frame, &mut next_reply_id);
+                    }
+                    Err(e) => {
+                        disconnect_reason = Some(format!("read: {e}"));
+                        break;
+                    }
+                }
             }
-            DriverCmd::SendFrame(_frame) => {
-                // todo!() — real `signal::Frame` write loop lands
-                //          alongside criome's signal server.
+            cmd_opt = cmds_rx.recv() => {
+                match cmd_opt {
+                    None => {
+                        disconnect_reason = Some("shell dropped connection handle".into());
+                        break;
+                    }
+                    Some(DriverCmd::Disconnect) => {
+                        disconnect_reason = Some("disconnect requested".into());
+                        break;
+                    }
+                    Some(DriverCmd::SendFrame(frame)) => {
+                        let _ = events_tx.send(EngineEvent::FrameSeen {
+                            direction: FrameDirection::Out,
+                            frame: frame.clone(),
+                        });
+                        if let Err(e) = write_frame(&mut write_half, &frame).await {
+                            disconnect_reason = Some(format!("write: {e}"));
+                            break;
+                        }
+                        next_req_id += 1;
+                    }
+                }
             }
         }
     }
 
     // ── Disconnect ─────────────────────────────────────────
-    let reason = disconnect_reason
-        .unwrap_or_else(|| "shell dropped connection handle".into());
+    let reason = disconnect_reason.unwrap_or_else(|| "loop ended".into());
     let _ = events_tx.send(disconnect_event(role, reason));
+    let _ = next_req_id; // keep linter quiet — req-id pairing
+                        // matures alongside subscription work.
+}
+
+/// Translate an inbound reply frame into the appropriate
+/// typed engine event(s). FrameSeen has already been emitted
+/// by the caller; this adds the higher-level events the
+/// model wants.
+fn emit_inbound_typed(
+    events_tx: &mpsc::UnboundedSender<EngineEvent>,
+    frame: Frame,
+    next_reply_id: &mut u64,
+) {
+    let body = match frame.body {
+        Body::Reply(r) => r,
+        Body::Request(_) => {
+            // Server sending a Request to the client is not
+            // part of the M0 protocol shape. Surface as a
+            // FrameSeen-only event (already emitted) and move
+            // on.
+            return;
+        }
+    };
+
+    match body {
+        Reply::HandshakeAccepted(_) | Reply::HandshakeRejected(_) => {
+            // Spurious handshake reply post-handshake; ignore.
+        }
+        Reply::Outcome(outcome) => {
+            let req_id = *next_reply_id;
+            *next_reply_id += 1;
+            let _ = events_tx.send(EngineEvent::OutcomeArrived {
+                req_id,
+                outcome,
+            });
+        }
+        Reply::Outcomes(outcomes) => {
+            let req_id = *next_reply_id;
+            *next_reply_id += 1;
+            for outcome in outcomes {
+                let _ = events_tx.send(EngineEvent::OutcomeArrived {
+                    req_id,
+                    outcome: outcome_to_message(outcome),
+                });
+            }
+        }
+        Reply::Records(records) => {
+            let req_id = *next_reply_id;
+            *next_reply_id += 1;
+            // For now every Records reply is QueryReplied; once
+            // subscriptions are wired the driver will track
+            // sub-ids and emit SubscriptionPush instead when
+            // the position belongs to a subscription rather
+            // than a one-shot query.
+            let _ = events_tx.send(EngineEvent::QueryReplied {
+                req_id,
+                records,
+            });
+        }
+    }
+}
+
+/// Pass-through wrapper. Kept as a function so the
+/// `Outcome(...)` vs `Outcomes(Vec<...>)` shape difference is
+/// visible at the call site.
+fn outcome_to_message(o: OutcomeMessage) -> OutcomeMessage {
+    o
+}
+
+async fn read_frame(read: &mut OwnedReadHalf) -> std::io::Result<Frame> {
+    let mut length_bytes = [0u8; 4];
+    read.read_exact(&mut length_bytes).await?;
+    let length = u32::from_be_bytes(length_bytes) as usize;
+    let mut frame_bytes = vec![0u8; length];
+    read.read_exact(&mut frame_bytes).await?;
+    Frame::decode(&frame_bytes).map_err(|e| {
+        std::io::Error::new(std::io::ErrorKind::InvalidData, format!("{e:?}"))
+    })
+}
+
+async fn write_frame(write: &mut OwnedWriteHalf, frame: &Frame) -> std::io::Result<()> {
+    let bytes = frame.encode();
+    let length = u32::try_from(bytes.len())
+        .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidInput, "frame too large"))?;
+    write.write_all(&length.to_be_bytes()).await?;
+    write.write_all(&bytes).await?;
+    Ok(())
+}
+
+fn client_name_for(role: DaemonRole) -> String {
+    match role {
+        DaemonRole::Criome => "mentci-egui".to_string(),
+        DaemonRole::Nexus => "mentci-egui".to_string(),
+    }
 }
 
 fn connect_event(role: DaemonRole, protocol_version: String) -> EngineEvent {
