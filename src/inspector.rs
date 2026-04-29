@@ -8,6 +8,7 @@
 use signal::{Hash, Revision, Slot};
 
 /// State the inspector carries between events.
+#[derive(Default)]
 pub struct InspectorState {
     pub focused: Option<Slot>,
     pub pinned: Vec<Slot>,

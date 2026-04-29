@@ -20,8 +20,10 @@ pub enum LayoutSource {
     UserAsserted { slot: signal::Slot },
 }
 
-/// Named layout roles. Concrete fields land as the Layout
-/// record kind shape finalises.
+/// Named layout roles. Concrete fields mirror
+/// [`signal::Layout`]; the workbench shell maps each named
+/// `SizeIntent` to a native pixel/em value via its built-in
+/// mapping table.
 pub struct LayoutIntents {
     pub left_nav_width_intent: SizeIntent,
     pub inspector_width_intent: SizeIntent,
@@ -32,13 +34,36 @@ pub struct LayoutIntents {
 }
 
 /// Semantic size hint that each shell maps to its native
-/// pixel/em system.
+/// pixel/em system. Mirrors `signal::SizeIntent`. Intent-only;
+/// pixel overrides (when wired) live as a separate
+/// `pixel_override: Option<u32>` field on the relevant
+/// pane-state, not as a SizeIntent variant.
 #[derive(Debug, Clone, Copy)]
 pub enum SizeIntent {
     Narrow,
     Medium,
     Wide,
-    /// Concrete pixel hint, when the user has dragged a
-    /// splitter to a specific value.
-    Pixels(u32),
+}
+
+impl LayoutState {
+    /// Built-in default — shipped with every shell.
+    pub fn builtin_default() -> Self {
+        Self {
+            source: LayoutSource::BuiltinDefault,
+            intents: LayoutIntents {
+                left_nav_width_intent: SizeIntent::Narrow,
+                inspector_width_intent: SizeIntent::Medium,
+                diagnostics_height_intent: SizeIntent::Narrow,
+                wire_height_intent: SizeIntent::Narrow,
+                wire_pane_visible: false,
+                tweaks_pane_open: false,
+            },
+        }
+    }
+}
+
+impl Default for LayoutState {
+    fn default() -> Self {
+        Self::builtin_default()
+    }
 }

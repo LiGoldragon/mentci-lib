@@ -44,6 +44,25 @@ pub struct ConnectionView {
 
 impl ConnectionState {
     pub fn new() -> Self {
-        todo!()
+        Self {
+            criome: PerDaemonState::disconnected(),
+            nexus: PerDaemonState::disconnected(),
+        }
+    }
+}
+
+impl Default for ConnectionState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl PerDaemonState {
+    pub fn disconnected() -> Self {
+        Self {
+            status: DaemonStatus::Disconnected,
+            protocol_version: None,
+            last_disconnect_reason: None,
+        }
     }
 }

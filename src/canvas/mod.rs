@@ -28,6 +28,16 @@ pub struct CanvasState {
     pub kind_state: KindCanvasState,
 }
 
+impl Default for CanvasState {
+    fn default() -> Self {
+        Self {
+            focus: None,
+            viewport: Viewport::default(),
+            kind_state: KindCanvasState::Empty,
+        }
+    }
+}
+
 /// Per-kind state. Variants map 1:1 to renderer impls.
 pub enum KindCanvasState {
     Empty,

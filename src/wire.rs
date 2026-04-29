@@ -11,6 +11,7 @@
 
 use crate::event::FrameDirection;
 
+#[derive(Default)]
 pub struct WireState {
     pub paused: bool,
     pub filter: WireFilter,

@@ -8,6 +8,7 @@
 
 use signal::Slot;
 
+#[derive(Default)]
 pub struct DiagnosticsState {
     pub entries: Vec<DiagnosticEntry>,
 }
