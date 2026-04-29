@@ -26,13 +26,9 @@ pub enum Cmd {
     /// Close + drop the nexus-daemon connection.
     DisconnectNexus,
 
-    /// Register a subscription on criome.
-    Subscribe { query: signal::Request },
-    /// Unsubscribe from criome.
-    Unsubscribe { sub_id: u64 },
-
     /// Ask nexus-daemon to render a typed payload as nexus
-    /// text. Reply arrives as [`crate::event::EngineEvent::NexusRendered`].
+    /// text. Reply arrives as
+    /// [`crate::event::EngineEvent::NexusRendered`].
     RenderViaNexus { ticket: u64, payload: NexusRenderRequest },
 
     /// Schedule a timer that fires once after `ms` milliseconds.
