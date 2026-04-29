@@ -125,15 +125,7 @@ impl WorkbenchState {
                 tweaks_open: self.layout.intents.tweaks_pane_open,
             },
             graphs_nav: self.graphs_nav_view(),
-            canvas: match &self.canvas.kind_state {
-                KindCanvasState::Empty => CanvasView::Empty,
-                KindCanvasState::FlowGraph(_) => {
-                    // Concrete flow-graph rendering against the
-                    // cache lands as the FlowGraphRenderer impl
-                    // fills in. For now: empty.
-                    CanvasView::Empty
-                }
-            },
+            canvas: self.canvas_view(),
             inspector: InspectorView {
                 focused: None,
                 pinned: Vec::new(),
@@ -141,6 +133,30 @@ impl WorkbenchState {
             diagnostics: None,
             wire: None,
             constructor: None,
+        }
+    }
+
+    /// Build the canvas view per current kind-state.
+    fn canvas_view(&self) -> CanvasView {
+        match &self.canvas.kind_state {
+            KindCanvasState::Empty => CanvasView::Empty,
+            KindCanvasState::FlowGraph(_kstate) => {
+                // The selected Graph's identity. The cache
+                // entry is found by the synthetic vec-position
+                // slot encoded into focus; this matches what
+                // graphs_nav_view emits.
+                let focus = match self.canvas.focus {
+                    Some(s) => s,
+                    None => return CanvasView::Empty,
+                };
+                let focus_idx: u64 = focus.into();
+                let graph = match self.cache.graphs.get(focus_idx as usize) {
+                    Some(g) => g.clone(),
+                    None => return CanvasView::Empty,
+                };
+                let view = build_flow_graph_view(graph, &self.cache);
+                CanvasView::FlowGraph(view)
+            }
         }
     }
 
@@ -179,6 +195,23 @@ impl WorkbenchState {
             UserEvent::ToggleTweaksPane => {
                 self.layout.intents.tweaks_pane_open =
                     !self.layout.intents.tweaks_pane_open;
+                Vec::new()
+            }
+            UserEvent::SelectGraph { slot } => {
+                // Focus the graph on the canvas. The next view
+                // derivation builds a FlowGraphView from cache.
+                self.canvas.focus = Some(slot);
+                self.canvas.kind_state =
+                    KindCanvasState::FlowGraph(crate::canvas::flow_graph::FlowGraphCanvasState {
+                        graph: slot,
+                        pending_wire: None,
+                    });
+                Vec::new()
+            }
+            UserEvent::SelectSlot { slot } => {
+                // Generic selection — focuses the inspector.
+                // Canvas focus stays on the current Graph.
+                self.inspector.focused = Some(slot);
                 Vec::new()
             }
             UserEvent::ReconnectCriome => vec![Cmd::ConnectCriome],
@@ -252,6 +285,7 @@ impl WorkbenchState {
     /// `Query` request frame. Auth is `SingleOperator` for
     /// the MVP; real BLS/quorum proofs land with the authz
     /// model.
+    #[allow(dead_code)]
     fn criome_query(&self, op: QueryOperation) -> Cmd {
         let frame = Frame {
             principal_hint: Some(self.principal),
@@ -259,5 +293,77 @@ impl WorkbenchState {
             body: Body::Request(Request::Query(op)),
         };
         Cmd::SendCriome { frame }
+    }
+}
+
+/// Compose a [`crate::canvas::flow_graph::FlowGraphView`]
+/// from one Graph and the workbench cache.
+///
+/// Until records-with-slots lands on the wire, edge endpoints
+/// can't be resolved to specific Node records — `Edge.from`
+/// and `Edge.to` are sema slots, while cached Nodes only carry
+/// synthetic vec-position slots. For the first-paint cycle
+/// the renderer paints every cached Node in a deterministic
+/// horizontal row and lays out edges by hashing their
+/// `from`/`to` slots into row positions. Visual placeholder;
+/// the real layout uses NodePlacement records once they're
+/// flowing through the wire.
+fn build_flow_graph_view(
+    graph: signal::Graph,
+    cache: &ModelCache,
+) -> crate::canvas::flow_graph::FlowGraphView {
+    use crate::canvas::flow_graph::{
+        EdgeStateIntent, FlowGraphView, KindGlyph, NodeStateIntent, RenderedEdge, RenderedNode,
+    };
+
+    let nodes_per_row = 8usize.max(1);
+    let cell_w = 140.0_f32;
+    let cell_h = 90.0_f32;
+    let origin_x = 60.0_f32;
+    let origin_y = 60.0_f32;
+
+    let rendered_nodes: Vec<RenderedNode> = cache
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(i, n)| {
+            let col = (i % nodes_per_row) as f32;
+            let row = (i / nodes_per_row) as f32;
+            RenderedNode {
+                slot: signal::Slot::from(i as u64),
+                at: (origin_x + col * cell_w, origin_y + row * cell_h),
+                kind_glyph: KindGlyph::Unknown,
+                state_intent: NodeStateIntent::Stable,
+                display_name: n.name.clone(),
+            }
+        })
+        .collect();
+
+    // Map edge endpoint slots into the row of rendered nodes
+    // by modular indexing. Honest fallback until slot wire
+    // shape ships.
+    let n = rendered_nodes.len().max(1) as u64;
+    let rendered_edges: Vec<RenderedEdge> = cache
+        .edges
+        .iter()
+        .enumerate()
+        .map(|(i, e)| {
+            let from_u: u64 = e.from.into();
+            let to_u: u64 = e.to.into();
+            RenderedEdge {
+                slot: signal::Slot::from(i as u64),
+                from: signal::Slot::from(from_u % n),
+                to: signal::Slot::from(to_u % n),
+                relation_intent: e.kind,
+                state_intent: EdgeStateIntent::Stable,
+            }
+        })
+        .collect();
+
+    FlowGraphView {
+        graph,
+        nodes: rendered_nodes,
+        edges: rendered_edges,
+        pending_wire: None,
     }
 }
