@@ -55,6 +55,7 @@ pub struct GraphsNavEntry {
     pub kind: GraphsNavKind,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum GraphsNavKind {
     Graph,
     Tweaks,
