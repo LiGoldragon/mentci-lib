@@ -6,6 +6,12 @@
 //! shell sees a unified "engine" surface; the dual-daemon
 //! split is hidden from widget code and revealed only in the
 //! header view.
+//!
+//! UDS dialing + per-connection task management lives in
+//! [`driver`]; the shell owns the tokio runtime and spawns
+//! one driver per daemon.
+
+pub mod driver;
 
 /// Live state of both daemon connections.
 pub struct ConnectionState {
