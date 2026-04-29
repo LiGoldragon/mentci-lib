@@ -1,0 +1,17 @@
+[package]
+name         = "mentci-lib"
+version      = "0.1.0"
+edition      = "2024"
+rust-version = "1.85"
+license      = "MIT OR Apache-2.0"
+repository   = "https://github.com/LiGoldragon/mentci-lib"
+description  = "mentci-lib — heavy application logic for the mentci interaction surface. Holds workbench state, view snapshots, user-event handling, dual-daemon connection management, schema-aware constructor flows, and per-kind canvas renderers. Consumed by thin GUI shells (mentci-egui first; mentci-iced and mentci-flutter later). Skeleton-as-design."
+
+[dependencies]
+signal    = { git = "https://github.com/LiGoldragon/signal", branch = "main" }
+rkyv      = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
+thiserror = "2"
+
+[lints.rust]
+unused = "allow"
+dead_code = "allow"
