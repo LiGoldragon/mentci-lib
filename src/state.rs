@@ -278,20 +278,22 @@ impl WorkbenchState {
                 self.connections.criome.status = DaemonStatus::Connected;
                 self.connections.criome.protocol_version = Some(protocol_version);
                 self.connections.criome.last_disconnect_reason = None;
-                // Auto-fetch the canonical kinds so the
-                // workbench paints something on connect. Live
-                // updates land when criome's Subscribe handler
-                // ships (M2-side work); until then this is a
-                // one-shot snapshot per connect — not a poll
-                // loop. Push-not-pull discipline preserved.
+                // Auto-subscribe to the canonical kinds so the
+                // workbench paints on connect AND keeps painting
+                // as records change. Per the push-not-pull
+                // discipline: each Subscribe yields an initial
+                // Reply::Records (position-paired) followed by
+                // ongoing Reply::Records pushes when matching
+                // records are written. The model treats both
+                // identically — both absorb into the cache.
                 vec![
-                    self.criome_query(QueryOperation::Graph(GraphQuery {
+                    self.criome_subscribe(QueryOperation::Graph(GraphQuery {
                         title: PatternField::Wildcard,
                     })),
-                    self.criome_query(QueryOperation::Node(NodeQuery {
+                    self.criome_subscribe(QueryOperation::Node(NodeQuery {
                         name: PatternField::Wildcard,
                     })),
-                    self.criome_query(QueryOperation::Edge(EdgeQuery {
+                    self.criome_subscribe(QueryOperation::Edge(EdgeQuery {
                         from: PatternField::Wildcard,
                         to: PatternField::Wildcard,
                         kind: PatternField::Wildcard,
@@ -365,15 +367,25 @@ impl WorkbenchState {
     }
 
     /// Helper: build a [`Cmd::SendCriome`] carrying a
-    /// `Query` request frame. Auth is `SingleOperator` for
-    /// the MVP; real BLS/quorum proofs land with the authz
-    /// model.
+    /// `Query` request frame (one-shot read).
     #[allow(dead_code)]
     fn criome_query(&self, op: QueryOperation) -> Cmd {
         let frame = Frame {
             principal_hint: Some(self.principal),
             auth_proof: Some(AuthProof::SingleOperator),
             body: Body::Request(Request::Query(op)),
+        };
+        Cmd::SendCriome { frame }
+    }
+
+    /// Helper: build a [`Cmd::SendCriome`] carrying a
+    /// `Subscribe` request frame (registers a live push
+    /// subscription).
+    fn criome_subscribe(&self, op: QueryOperation) -> Cmd {
+        let frame = Frame {
+            principal_hint: Some(self.principal),
+            auth_proof: Some(AuthProof::SingleOperator),
+            body: Body::Request(Request::Subscribe(op)),
         };
         Cmd::SendCriome { frame }
     }
