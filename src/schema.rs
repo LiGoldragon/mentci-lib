@@ -6,16 +6,29 @@
 //! applies to. The constructor flows in [`crate::constructor`]
 //! consume this knowledge to surface the right choices.
 //!
-//! **Today:** schema is compiled in — derived at build-time
-//! from signal's hand-written record-kind types.
+//! **Source: sema, queried at runtime.** Per
+//! [mentci/reports/119](https://github.com/LiGoldragon/mentci/blob/main/reports/119-schema-in-sema-corrected-direction-2026-04-30.md):
+//! schema lives in sema as `KindDecl` / `FieldDecl` /
+//! `VariantDecl` records, written by the engine's seed step at
+//! first boot and read-only thereafter. `CompiledSchema` here
+//! is the consumer side: every method below queries sema for
+//! the relevant records, deserialises them into the trait's
+//! return shapes, and hands them to the constructor flows.
 //!
-//! **Tomorrow:** schema-in-sema. Per criome ARCH and report
-//! 111 §13, signal's record-kind type definitions become
-//! records in sema themselves ("datatypes-datatypes"). At
-//! that point this module reads schema from sema records and
-//! the rest of mentci-lib is unchanged. The contract — schema
-//! is data the constructors consume — is the same in both
-//! eras.
+//! Do **NOT** wire `CompiledSchema` to read `signal::ALL_KINDS`
+//! directly. That const exists only as the build-time input to
+//! the seed projector; mentci-lib has no business reading it.
+//! See beads `mentci-next-lvg` for the in-flight correction
+//! and reports/119 §2.1 for the reasoning.
+//!
+//! Implementation arc:
+//! 1. `KindDecl` / `FieldDecl` / `VariantDecl` lands in signal
+//!    as new record kinds (with their own `#[derive(Schema)]`
+//!    so they describe themselves — the recursion).
+//! 2. The seed step pipes those records into sema on engine
+//!    first boot.
+//! 3. `CompiledSchema`'s methods become `Query` calls into
+//!    criome via the existing connection driver.
 
 use signal::RelationKind;
 
