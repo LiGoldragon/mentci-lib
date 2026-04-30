@@ -4,20 +4,20 @@
 //! Closed enums; one variant per kind of event. Adding a new
 //! gesture or engine push grows the appropriate enum.
 
-use signal::{Frame, Slot};
+use signal::{AnyKind, Frame, Graph, Node, Slot};
 
 /// What the shell forwards when the user does something.
 #[derive(Debug, Clone)]
 pub enum UserEvent {
     // ── selection ──────────────────────────────────────────
     /// Pick a Graph in the GraphsNav.
-    SelectGraph { slot: Slot },
+    SelectGraph { slot: Slot<Graph> },
     /// Pick any slot — Node, Edge, or another record kind.
-    SelectSlot { slot: Slot },
+    SelectSlot { slot: Slot<AnyKind> },
     /// Pin a slot to keep it visible across selections.
-    PinSlot { slot: Slot },
+    PinSlot { slot: Slot<AnyKind> },
     /// Unpin a previously pinned slot.
-    UnpinSlot { slot: Slot },
+    UnpinSlot { slot: Slot<AnyKind> },
 
     // ── canvas: flow-graph gestures ────────────────────────
     /// Open the new-node constructor flow. Triggered by an
@@ -26,23 +26,23 @@ pub enum UserEvent {
     OpenNewNodeFlow,
     /// Begin dragging a new box onto the canvas. Position +
     /// kind picked from the palette.
-    BeginDragNewBox { graph: Slot, kind: NodeKindHint, at: CanvasPos },
+    BeginDragNewBox { graph: Slot<Graph>, kind: NodeKindHint, at: CanvasPos },
     /// Mouse moves while dragging.
     UpdateDragNewBox { at: CanvasPos },
     /// Drop the new box. Triggers the constructor flow modal.
     DropDragNewBox { at: CanvasPos },
 
     /// Begin dragging a wire from a node.
-    BeginDragWire { from: Slot, at: CanvasPos },
+    BeginDragWire { from: Slot<Node>, at: CanvasPos },
     /// Mouse moves while dragging the wire end.
     UpdateDragWire { at: CanvasPos },
     /// Drop the wire on a target. Triggers the edge constructor flow.
-    DropDragWire { onto: Slot },
+    DropDragWire { onto: Slot<Node> },
 
     // ── canvas: any-kind gestures ──────────────────────────
     /// Move a node on the canvas. Generates a Mutate to its
     /// position record on commit.
-    MoveNode { slot: Slot, to: CanvasPos },
+    MoveNode { slot: Slot<Node>, to: CanvasPos },
     /// Pan the canvas viewport.
     PanCanvas { delta: CanvasDelta },
     /// Zoom the canvas viewport.
@@ -60,16 +60,17 @@ pub enum UserEvent {
     ConstructorCancel,
 
     // ── inspector / rename ─────────────────────────────────
-    /// Begin editing a record's display name in place.
-    BeginRename { slot: Slot },
+    /// Begin editing a record's display name in place. Rename
+    /// works on any kind, so the slot is type-erased here.
+    BeginRename { slot: Slot<AnyKind> },
     /// Commit a renamed value.
-    CommitRename { slot: Slot, new_name: String, expected_rev: signal::Revision },
+    CommitRename { slot: Slot<AnyKind>, new_name: String, expected_rev: signal::Revision },
     /// Cancel a rename in progress.
     CancelRename,
 
     /// Retract a record (Node, Edge, …). Surfaces a confirm
     /// flow before the verb is sent.
-    RequestRetract { slot: Slot },
+    RequestRetract { slot: Slot<AnyKind> },
 
     // ── pane toggles ───────────────────────────────────────
     ToggleWirePane,

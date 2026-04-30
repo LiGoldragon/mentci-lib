@@ -21,7 +21,7 @@
 //! - **Equivalence with the agent path.** Whatever an agent
 //!   could send via nexus, a human can build via gestures.
 
-use signal::{RelationKind, Slot};
+use signal::{AnyKind, Edge, Graph, Node, RelationKind, Slot};
 
 /// At most one constructor flow is active at a time. The
 /// variants enumerate every editable shape.
@@ -51,7 +51,7 @@ pub enum ConstructorView {
 // ── New-Node flow ───────────────────────────────────────────
 
 pub struct NewNodeFlow {
-    pub graph: Slot,
+    pub graph: Slot<Graph>,
     pub at_x: f32,
     pub at_y: f32,
     pub kind_choice: Option<String>,
@@ -68,8 +68,8 @@ pub struct NewNodeView {
 // ── New-Edge flow ───────────────────────────────────────────
 
 pub struct NewEdgeFlow {
-    pub from: Slot,
-    pub to: Slot,
+    pub from: Slot<Node>,
+    pub to: Slot<Node>,
     pub kind_choice: Option<RelationKind>,
     pub description_input: String,
 }
@@ -89,7 +89,7 @@ pub struct NewEdgeView {
 // ── Rename flow ─────────────────────────────────────────────
 
 pub struct RenameFlow {
-    pub slot: Slot,
+    pub slot: Slot<AnyKind>,
     pub current_name: String,
     pub new_name: String,
     pub expected_rev: signal::Revision,
@@ -105,10 +105,10 @@ pub struct RenameView {
 // ── Retract flow ────────────────────────────────────────────
 
 pub struct RetractFlow {
-    pub slot: Slot,
+    pub slot: Slot<AnyKind>,
     pub expected_rev: signal::Revision,
-    pub references_in: Vec<Slot>,
-    pub references_out: Vec<Slot>,
+    pub references_in: Vec<Slot<Edge>>,
+    pub references_out: Vec<Slot<Edge>>,
 }
 
 pub struct RetractView {

@@ -13,7 +13,7 @@ use signal::{Edge, Graph, Node, RelationKind, Slot};
 /// Per-flow-graph canvas state. Held inside
 /// [`super::KindCanvasState::FlowGraph`].
 pub struct FlowGraphCanvasState {
-    pub graph: Slot,
+    pub graph: Slot<Graph>,
     /// Pending preview during a drag-wire flow (dashed wire
     /// before commit).
     pub pending_wire: Option<PendingWire>,
@@ -23,7 +23,7 @@ pub struct FlowGraphCanvasState {
 /// committed. Goes away when the constructor flow commits or
 /// cancels.
 pub struct PendingWire {
-    pub from: Slot,
+    pub from: Slot<Node>,
     pub to_slot_or_pos: PendingWireTarget,
 }
 
@@ -31,7 +31,7 @@ pub enum PendingWireTarget {
     /// Mouse-following — no target node yet.
     FreeFloating { x: f32, y: f32 },
     /// Hovered onto a target node — kind picker about to open.
-    Hovered { onto: Slot },
+    Hovered { onto: Slot<Node> },
 }
 
 /// What the shell paints. Pure data.
@@ -46,7 +46,7 @@ pub struct FlowGraphView {
 /// glyph + display name. The shell maps `kind_glyph` and
 /// `state_intent` to its native visual idiom.
 pub struct RenderedNode {
-    pub slot: Slot,
+    pub slot: Slot<Node>,
     pub at: (f32, f32),
     pub kind_glyph: KindGlyph,
     pub state_intent: NodeStateIntent,
@@ -55,9 +55,9 @@ pub struct RenderedNode {
 
 /// One edge, ready to paint.
 pub struct RenderedEdge {
-    pub slot: Slot,
-    pub from: Slot,
-    pub to: Slot,
+    pub slot: Slot<Edge>,
+    pub from: Slot<Node>,
+    pub to: Slot<Node>,
     pub relation_intent: RelationKind,
     pub state_intent: EdgeStateIntent,
 }

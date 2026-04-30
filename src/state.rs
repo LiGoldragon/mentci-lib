@@ -15,7 +15,7 @@
 
 use signal::{
     AuthProof, Body, Edge, EdgeQuery, Frame, Graph, GraphQuery, Node, NodeQuery,
-    PatternField, QueryOperation, Records, Request, Slot,
+    PatternField, Principal, QueryOperation, Records, Request, Slot,
 };
 
 use crate::canvas::{CanvasState, CanvasView, KindCanvasState};
@@ -37,7 +37,7 @@ pub struct WorkbenchState {
     /// Two-daemon connection state (criome + nexus-daemon).
     pub connections: ConnectionState,
     /// Current Principal slot (whose tweaks apply).
-    pub principal: Slot,
+    pub principal: Slot<Principal>,
     /// Theme intent derived from the active Theme record.
     pub theme: ThemeState,
     /// Layout intent derived from the active Layout record.
@@ -69,9 +69,9 @@ pub struct WorkbenchState {
 /// to specific Node entries by slot lookup.
 #[derive(Default)]
 pub struct ModelCache {
-    pub graphs: Vec<(Slot, Graph)>,
-    pub nodes: Vec<(Slot, Node)>,
-    pub edges: Vec<(Slot, Edge)>,
+    pub graphs: Vec<(Slot<Graph>, Graph)>,
+    pub nodes: Vec<(Slot<Node>, Node)>,
+    pub edges: Vec<(Slot<Edge>, Edge)>,
 }
 
 impl ModelCache {
@@ -88,7 +88,7 @@ impl ModelCache {
 
     /// Find the position of a Node by slot. `O(n)` for now —
     /// indexed lookups land if profiling demands.
-    pub fn node_position_by_slot(&self, slot: Slot) -> Option<usize> {
+    pub fn node_position_by_slot(&self, slot: Slot<Node>) -> Option<usize> {
         self.nodes.iter().position(|(s, _)| *s == slot)
     }
 }
@@ -98,7 +98,7 @@ impl WorkbenchState {
     /// The runtime opens connections after construction by
     /// dispatching [`Cmd::ConnectCriome`] and
     /// [`Cmd::ConnectNexus`].
-    pub fn new(principal: Slot) -> Self {
+    pub fn new(principal: Slot<Principal>) -> Self {
         Self {
             connections: ConnectionState::new(),
             principal,

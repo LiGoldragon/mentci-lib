@@ -17,7 +17,7 @@ pub struct LayoutState {
 
 pub enum LayoutSource {
     BuiltinDefault,
-    UserAsserted { slot: signal::Slot },
+    UserAsserted { slot: signal::Slot<signal::Layout> },
 }
 
 /// Named layout roles. Concrete fields mirror

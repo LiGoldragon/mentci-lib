@@ -10,7 +10,7 @@
 //! timelines, maps, calendars, statistical plots) each get
 //! their own renderer module.
 
-use signal::Slot;
+use signal::{Graph, Slot};
 
 pub mod flow_graph;
 
@@ -18,7 +18,7 @@ pub mod flow_graph;
 pub struct CanvasState {
     /// Slot currently focused (the Graph being viewed,
     /// usually).
-    pub focus: Option<Slot>,
+    pub focus: Option<Slot<Graph>>,
     /// Viewport (pan + zoom) — lives locally for now;
     /// graduates to records once the LayoutPersistence kind
     /// matures.

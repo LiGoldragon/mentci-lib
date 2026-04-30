@@ -275,7 +275,7 @@ checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 [[package]]
 name = "signal"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal?branch=main#7ed8acdcd9f10274624d48e80e362c1d2bfa3a21"
+source = "git+https://github.com/LiGoldragon/signal?branch=main#543193b853f7e4668482441807159ca184918a96"
 dependencies = [
  "nota-codec",
  "rkyv",

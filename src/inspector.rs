@@ -5,13 +5,13 @@
 //! Every history entry's arrow scrubs the canvas backward to
 //! that point in time.
 
-use signal::{Hash, Revision, Slot};
+use signal::{AnyKind, Hash, Revision, Slot};
 
 /// State the inspector carries between events.
 #[derive(Default)]
 pub struct InspectorState {
-    pub focused: Option<Slot>,
-    pub pinned: Vec<Slot>,
+    pub focused: Option<Slot<AnyKind>>,
+    pub pinned: Vec<Slot<AnyKind>>,
     /// History pagination cursor for the focused slot's log.
     pub history_offset: usize,
 }
@@ -24,7 +24,7 @@ pub struct InspectorView {
 
 /// Detail for the currently focused slot.
 pub struct FocusedSlotView {
-    pub slot: Slot,
+    pub slot: Slot<AnyKind>,
     pub kind: String,
     pub display_name: String,
     pub rev: Revision,
@@ -43,7 +43,7 @@ pub struct FocusedSlotView {
 /// Compact pinned-slot summary. Selecting expands it into
 /// the focused position.
 pub struct PinnedSlotView {
-    pub slot: Slot,
+    pub slot: Slot<AnyKind>,
     pub display_name: String,
     pub kind: String,
     pub rev: Revision,

@@ -45,12 +45,12 @@ pub struct HeaderView {
 /// recently visited slots, and a pinned set.
 pub struct GraphsNavView {
     pub graphs: Vec<GraphsNavEntry>,
-    pub selected_slot: Option<signal::Slot>,
+    pub selected_slot: Option<signal::Slot<signal::Graph>>,
 }
 
 /// One entry in the GraphsNav.
 pub struct GraphsNavEntry {
-    pub slot: signal::Slot,
+    pub slot: signal::Slot<signal::Graph>,
     pub display_name: String,
     pub kind: GraphsNavKind,
 }

@@ -29,7 +29,7 @@ pub enum ThemeSource {
     /// fallback.
     BuiltinDefault,
     /// A `Theme` record from sema.
-    UserAsserted { slot: signal::Slot },
+    UserAsserted { slot: signal::Slot<signal::Theme> },
 }
 
 /// Named palette roles — the semantic intents themes carry.

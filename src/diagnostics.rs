@@ -6,7 +6,7 @@
 //! pane is shown only when the list is non-empty; failed
 //! writes also overlay on the canvas at the affected node.
 
-use signal::Slot;
+use signal::{AnyKind, Slot};
 
 #[derive(Default)]
 pub struct DiagnosticsState {
@@ -25,7 +25,7 @@ pub struct DiagnosticEntry {
     pub code: String,
     pub message: String,
     pub suggestion: Option<String>,
-    pub jump_target: Option<Slot>,
+    pub jump_target: Option<Slot<AnyKind>>,
     pub read: bool,
 }
 
@@ -36,7 +36,7 @@ pub struct DiagnosticEntryView {
     pub code: String,
     pub message: String,
     pub suggestion: Option<String>,
-    pub jump_target: Option<Slot>,
+    pub jump_target: Option<Slot<AnyKind>>,
 }
 
 #[derive(Debug, Clone, Copy)]
