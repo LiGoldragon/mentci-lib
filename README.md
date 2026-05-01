@@ -19,7 +19,7 @@ ports cleanly across egui (immediate-mode), iced (literal
 Elm-architecture), Flutter (declarative), and any future
 shell.
 
-See [`ARCHITECTURE.md`](ARCHITECTURE.md). Project-wide
+See `ARCHITECTURE.md`. Project-wide
 context: criome/ARCHITECTURE.md.
 Project intent: lore/INTENTION.md.
 
