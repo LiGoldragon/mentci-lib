@@ -21,7 +21,7 @@ shell.
 
 See [`ARCHITECTURE.md`](ARCHITECTURE.md). Project-wide
 context: [criome/ARCHITECTURE.md](https://github.com/LiGoldragon/criome/blob/main/ARCHITECTURE.md).
-Project intent: [mentci/INTENTION.md](https://github.com/LiGoldragon/mentci/blob/main/INTENTION.md).
+Project intent: [lore/INTENTION.md](https://github.com/LiGoldragon/lore/blob/main/INTENTION.md).
 
 ## Status
 
