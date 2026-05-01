@@ -20,8 +20,8 @@ Elm-architecture), Flutter (declarative), and any future
 shell.
 
 See [`ARCHITECTURE.md`](ARCHITECTURE.md). Project-wide
-context: [criome/ARCHITECTURE.md](https://github.com/LiGoldragon/criome/blob/main/ARCHITECTURE.md).
-Project intent: [lore/INTENTION.md](https://github.com/LiGoldragon/lore/blob/main/INTENTION.md).
+context: criome/ARCHITECTURE.md.
+Project intent: lore/INTENTION.md.
 
 ## Status
 

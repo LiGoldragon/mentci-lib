@@ -88,7 +88,7 @@ Owns:
 Does not own:
 
 - The signal protocol — lives in
-  [signal](https://github.com/LiGoldragon/signal); this
+  signal; this
   library consumes it.
 - Sema state — owned by criome.
 - Any rendering primitives — those live in each shell.
@@ -130,13 +130,13 @@ All bodies are `todo!()` skeleton-as-design; types are pinned.
 ## Cross-cutting context
 
 - Project intent:
-  [lore/INTENTION.md](https://github.com/LiGoldragon/lore/blob/main/INTENTION.md)
+  lore/INTENTION.md
 - Project-wide architecture:
-  [criome/ARCHITECTURE.md](https://github.com/LiGoldragon/criome/blob/main/ARCHITECTURE.md)
+  criome/ARCHITECTURE.md
 - The first design report:
-  [mentci/reports/111-first-mentci-ui-introspection-2026-04-29.md](https://github.com/LiGoldragon/mentci/blob/main/reports/111-first-mentci-ui-introspection-2026-04-29.md)
+  workspace/reports/111-first-mentci-ui-introspection-2026-04-29.md
 - The first GUI shell:
-  [mentci-egui](https://github.com/LiGoldragon/mentci-egui)
+  mentci-egui
 
 ## Status
 
