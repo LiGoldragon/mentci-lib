@@ -75,15 +75,25 @@ Owns:
 - Workbench state machines (per-pane, per-flow).
 - Connection management for both daemons (criome, nexus-daemon).
 - Subscription registration + push demultiplexing.
-- Schema knowledge that informs constructor flows
-  (compile-time today; sema-record-driven once schema-in-sema
-  lands per criome ARCH §13).
+- Schema knowledge that informs constructor flows (compile-time
+  today via `signal` types; record-driven once a future schema
+  catalogue lands in criome's records database).
 - Per-kind canvas renderers that produce kind-specific
   view-state for the shell to paint.
 - Theme + layout interpretation — translates `Theme`,
   `Layout`, and related records into semantic-intent
   view-state the shell maps to its native palette.
 - Constructor-flow logic for every editing verb.
+
+Future shell-owned state (workbench history, recall last-opened
+workbench, per-user layout preferences) lives in mentci-lib's own
+`sema`-managed redb file — opened either inline through `sema`
+directly or through a future `mentci-sema` typed-table layer (the
+choice follows the same dimensionality test as criome's typed
+tables: inline if the table set stays compact, separate crate if
+it grows). This is library use of `sema`; no daemon, no shared
+database. Per
+`~/primary/reports/designer/92-sema-as-database-library-architecture-revamp.md`.
 
 Does not own:
 
