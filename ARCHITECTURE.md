@@ -3,6 +3,12 @@
 Heavy application logic for the mentci interaction surface.
 The library every mentci-* GUI shell consumes.
 
+> **Scope.** Any "sema" reference here is today's `sema` library
+> (rename pending → `sema-db`); any "criome" reference is today's
+> `criome` daemon. The eventual `Sema` / `Criome` are broader; this
+> library is a realization step on today's stack. See
+> `~/primary/ESSENCE.md` §"Today and eventually".
+
 ## Role in the sema-ecosystem
 
 ```
