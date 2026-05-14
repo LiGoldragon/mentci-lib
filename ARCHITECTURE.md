@@ -98,8 +98,7 @@ directly or through a future `mentci-sema` typed-table layer (the
 choice follows the same dimensionality test as criome's typed
 tables: inline if the table set stays compact, separate crate if
 it grows). This is library use of `sema`; no daemon, no shared
-database. Per
-`~/primary/reports/designer/92-sema-as-database-library-architecture-revamp.md`.
+database.
 
 Does not own:
 
