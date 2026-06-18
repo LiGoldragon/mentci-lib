@@ -1,7 +1,8 @@
 # ARCHITECTURE — mentci-lib
 
-Heavy application logic for the mentci interaction surface.
-The library every mentci-* GUI shell consumes.
+Shared application and state-machine logic for the Mentci interaction
+surface. The future `mentci` daemon and every thin Mentci client consume
+this library.
 
 > **Scope.** Any "sema" reference here is today's `sema` library
 > (rename pending → `sema-db`); any "criome" reference is today's
@@ -15,12 +16,12 @@ The library every mentci-* GUI shell consumes.
               ┌──────────────────────────────────┐
               │          mentci-lib              │
               │                                  │
-              │  ALL APPLICATION LOGIC           │
+              │  SHARED APPLICATION LOGIC        │
               │   (workbench state machines,     │
               │    constructor flows, schema     │
               │    knowledge, theme/layout       │
-              │    interpretation, dual-daemon   │
-              │    connection management)        │
+              │    interpretation, approval      │
+              │    subscriptions)                │
               │                                  │
               │  EXPOSES                         │
               │   • WorkbenchView (data out)     │
@@ -34,8 +35,10 @@ The library every mentci-* GUI shell consumes.
                      │
             ┌────────┼────────┐
             ▼        ▼        ▼
-       mentci-daemon
-       (state owner)
+       mentci component triad
+       ├─ mentci daemon repo
+       ├─ signal-mentci contract
+       └─ meta-signal-mentci contract
              │
              │ view/event/cmd model
              ▼
@@ -51,11 +54,17 @@ The library every mentci-* GUI shell consumes.
                  └──────────┘    └──────────────┘
 ```
 
+Mentci is a first-class component triad. The `mentci` daemon repository
+will hold the daemon, thin CLI, and daemon-local Signal/Nexus/SEMA
+runtime schemas. `signal-mentci` will hold the ordinary programmable-UI
+wire vocabulary; `meta-signal-mentci` will hold startup configuration
+and reconfiguration vocabulary.
+
 mentci-lib owns the typed state machines that the future Mentci daemon
 will host. UI shells remain thin clients over daemon state: they paint
 `WorkbenchView`, send `UserEvent`, and receive pushed state updates.
 The daemon owns persistence, socket lifecycle, subscriptions, and the
-long-lived criome/nexus-daemon connections.
+long-lived criome connection.
 
 ## The contract — MVU shaped
 
@@ -86,7 +95,7 @@ is a property of the shape.
 Owns:
 
 - Workbench state machines (per-pane, per-flow).
-- Connection management for both daemons (criome, nexus-daemon).
+- Shared connection-state records used by the daemon and clients.
 - Subscription registration + push demultiplexing.
 - Approval-state subscription and delivery mechanics for the Mentci
   daemon's programmable UI clients.
@@ -103,16 +112,18 @@ Owns:
 Future daemon-owned state (workbench history, recall last-opened
 workbench, per-user layout preferences, approval queue, client
 subscriptions) lives behind the Mentci daemon. The in-memory library
-state is the shared model and test surface; durable persistence should
-land in the daemon through typed SEMA/redb storage once the daemon
+state is the shared model and test surface; durable persistence lands in
+the `mentci` daemon through typed SEMA/redb storage once the daemon
 exists.
 
 Does not own:
 
-- The signal protocol — lives in
-  signal; this
-  library consumes it.
-- Sema state — owned by criome.
+- The Mentci wire contracts — `signal-mentci` and
+  `meta-signal-mentci`; this library consumes the generated types once
+  those repositories exist.
+- Criome authorization/key-store state — owned by criome. Mentci has its
+  own UI state; criome owns the key store and signing authority Mentci
+  asks to use.
 - Any rendering primitives — those live in each shell.
 - Any GUI-library types — egui, iced, Flutter widgets, etc.,
   do not appear in this crate.
@@ -162,7 +173,8 @@ All bodies are `todo!()` skeleton-as-design; types are pinned.
 
 ## Status
 
-**Running model, daemon pending.** The approval queue and subscription
-state are implemented and tested in mentci-lib. The Mentci daemon,
+**Running model, component triad pending.** The approval queue and
+subscription state are implemented and tested in mentci-lib. The
+`mentci` daemon repository, `signal-mentci`, `meta-signal-mentci`,
 TUI/CLI socket protocol, and criome key-unlock integration are the next
 production slices.

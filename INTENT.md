@@ -7,12 +7,13 @@ mentci-lib IS; this file says what the psyche wants it to BE.*
 
 ## Purpose
 
-`mentci-lib` is the heavy application-logic library for the mentci
-interaction surface — the library every `mentci-*` GUI shell
-(`mentci-egui`, `mentci-iced`, `mentci-flutter`) consumes. ALL
-application logic lives here: workbench state machines, constructor
-flows, schema knowledge, theme/layout interpretation, and the
-dual-daemon connection management. The shells stay thin.
+`mentci-lib` is the shared application and state-machine library for
+the Mentci component. The full component shape is the standard triad:
+the `mentci` daemon repository, the `signal-mentci` working signal
+contract repository, and the `meta-signal-mentci` meta policy contract
+repository. `mentci-lib` is not the daemon repo; it is the heavy library
+reused by the daemon and by thin client shells such as `mentci-egui`,
+future TUI/CLI clients, editor integrations, and status surfaces.
 
 ## Constraints
 
@@ -34,12 +35,17 @@ dual-daemon connection management. The shells stay thin.
   rendering primitives live in each shell. The signal protocol
   lives in `signal` and is consumed here, not redefined; Sema state
   is owned by criome, not here.
-- **Daemon-owned state, shared library implementation.** Mentci is
-  becoming a daemon-owned programmable UI surface: state changes in the
-  daemon, and every UI client paints daemon state. `mentci-lib` owns the
-  typed state machines and subscription model that the daemon and thin
-  clients share; the daemon will own persistence, sockets, key-unlock
-  flow, and long-lived runtime lifecycle.
+- **First-class component triad.** Mentci's runtime home is the future
+  `mentci` daemon repository. `signal-mentci` carries the ordinary
+  programmable-UI wire vocabulary; `meta-signal-mentci` carries startup
+  configuration and reconfiguration. The daemon repository contains the
+  daemon, thin CLI, and daemon-local Signal/Nexus/SEMA runtime schemas.
+- **Daemon-owned state, shared library implementation.** Mentci is a
+  daemon-owned programmable UI surface: state changes in the daemon, and
+  every UI client paints daemon state. `mentci-lib` owns the typed state
+  machines and subscription model that the daemon and thin clients share;
+  the daemon owns persistence, sockets, key-unlock flow, and long-lived
+  runtime lifecycle.
 - **Programmable client surface.** TUI, CLI, egui, editor integrations,
   status bars, popups, email bridges, and agentic flows are clients over
   the same Mentci daemon state. They subscribe to updates and submit
