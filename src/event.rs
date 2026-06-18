@@ -5,7 +5,7 @@
 //! gesture or engine push grows the appropriate enum.
 
 use crate::approval::{
-    ApprovalClientIdentifier, ApprovalInterest, ApprovalQuestion, ApprovalResponse,
+    AnswerProposal, ApprovalClientIdentifier, ApprovalInterest, ApprovalQuestion, ApprovalResponse,
     ApprovalSubscriptionIdentifier,
 };
 use signal::{AnyKind, Frame, Graph, Node, Slot};
@@ -158,6 +158,10 @@ pub enum UserEvent {
     /// Answer a pending approval question.
     AnswerApproval {
         response: ApprovalResponse,
+    },
+    /// Submit a different answer as a new typed proposal object.
+    ProposeApprovalAnswer {
+        proposal: AnswerProposal,
     },
 }
 

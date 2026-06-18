@@ -99,6 +99,9 @@ Owns:
 - Subscription registration + push demultiplexing.
 - Approval-state subscription and delivery mechanics for the Mentci
   daemon's programmable UI clients.
+- Closed-verdict approval modeling: approve suggested answer, reject, or
+  defer. Edited answers are separate typed `AnswerProposal` objects for
+  criome authorization, not verdict variants.
 - Schema knowledge that informs constructor flows (compile-time
   today via `signal` types; record-driven once a future schema
   catalogue lands in criome's records database).
@@ -173,8 +176,9 @@ All bodies are `todo!()` skeleton-as-design; types are pinned.
 
 ## Status
 
-**Running model, component triad pending.** The approval queue and
-subscription state are implemented and tested in mentci-lib. The
-`mentci` daemon repository, `signal-mentci`, `meta-signal-mentci`,
-TUI/CLI socket protocol, and criome key-unlock integration are the next
-production slices.
+**Running model, contract triad bootstrapped locally.** The approval
+queue and subscription state are implemented and tested in mentci-lib.
+Local main checkouts now exist for `signal-mentci` and
+`meta-signal-mentci`; remote creation and the `mentci` daemon repository
+are still the next production slices. The TUI/CLI socket protocol and
+criome key-unlock integration remain pending.

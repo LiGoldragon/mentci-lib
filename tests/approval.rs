@@ -1,7 +1,8 @@
 use mentci_lib::approval::{
-    ApprovalAnswer, ApprovalClientIdentifier, ApprovalContext, ApprovalDecision, ApprovalDelivery,
-    ApprovalExplanation, ApprovalIdentifier, ApprovalInterest, ApprovalPrompt, ApprovalQuestion,
-    ApprovalResponse, ApprovalSource, ApprovalState, ApprovalUpdate, SuggestedAnswer,
+    AnswerBody, AnswerProposal, ApprovalClientIdentifier, ApprovalContext, ApprovalDecision,
+    ApprovalDelivery, ApprovalExplanation, ApprovalIdentifier, ApprovalInterest, ApprovalPrompt,
+    ApprovalQuestion, ApprovalResponse, ApprovalSource, ApprovalState, ApprovalUpdate,
+    SuggestedAnswer,
 };
 use mentci_lib::{Cmd, EngineEvent, UserEvent, WorkbenchState};
 use signal::{Principal, Slot};
@@ -47,7 +48,7 @@ fn answering_approval_question_removes_it_and_submits_response() {
     });
     let response = ApprovalResponse::new(
         question.identifier,
-        ApprovalDecision::Answer(ApprovalAnswer::new("Approve after checking mirror head.")),
+        ApprovalDecision::ApproveSuggestedAnswer,
     );
 
     let commands = workbench.on_user_event(UserEvent::AnswerApproval {
@@ -67,6 +68,38 @@ fn answering_approval_question_removes_it_and_submits_response() {
             assert_eq!(submitted, &response);
         }
         other => panic!("expected one SubmitApproval command, got {other:?}"),
+    }
+}
+
+#[test]
+fn edited_approval_answer_is_submitted_as_a_new_proposal() {
+    let mut workbench = WorkbenchState::new(Slot::<Principal>::from(1));
+    let question = approval_question(10);
+    workbench.on_engine_event(EngineEvent::ApprovalQuestionArrived {
+        question: question.clone(),
+    });
+    let proposal = AnswerProposal::new(
+        question.identifier,
+        AnswerBody::new("Approve after checking mirror head."),
+    );
+
+    let commands = workbench.on_user_event(UserEvent::ProposeApprovalAnswer {
+        proposal: proposal.clone(),
+    });
+    let view = workbench.view();
+
+    assert_eq!(view.approval.pending_count, 1);
+    assert_eq!(view.approval.answered_count, 0);
+    assert_eq!(view.approval.current, Some(question));
+    match commands.as_slice() {
+        [
+            Cmd::SubmitAnswerProposal {
+                proposal: submitted,
+            },
+        ] => {
+            assert_eq!(submitted, &proposal);
+        }
+        other => panic!("expected one SubmitAnswerProposal command, got {other:?}"),
     }
 }
 

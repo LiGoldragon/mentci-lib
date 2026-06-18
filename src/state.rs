@@ -295,6 +295,9 @@ impl WorkbenchState {
                     Vec::new()
                 }
             }
+            UserEvent::ProposeApprovalAnswer { proposal } => {
+                vec![Cmd::SubmitAnswerProposal { proposal }]
+            }
             // Every other event is unhandled in this skeleton
             // pass; bodies fill in as the wire wires up.
             _ => Vec::new(),

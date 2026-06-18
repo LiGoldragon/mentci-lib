@@ -50,6 +50,11 @@ future TUI/CLI clients, editor integrations, and status surfaces.
   status bars, popups, email bridges, and agentic flows are clients over
   the same Mentci daemon state. They subscribe to updates and submit
   responses rather than owning separate approval logic.
+- **Closed verdicts; edits are proposals.** A Mentci verdict is a closed
+  choice: approve the suggested answer, reject, or defer. If the psyche
+  edits the suggested answer, that edit becomes a new typed proposal
+  object submitted through the normal criome authorization path; it is not
+  carried as an open answer inside the verdict.
 - **Criome owns the key store.** Mentci interacts heavily with the local
   criome instance for escalations and key-unlock/use. The key store is a
   criome concern; Mentci presents the human approval/key-unlock surface.

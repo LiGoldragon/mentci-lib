@@ -6,7 +6,8 @@
 //! property — `update` is a pure function of `(state, event)`.
 
 use crate::approval::{
-    ApprovalDelivery, ApprovalQuestion, ApprovalResponse, ApprovalSubscriptionReceipt,
+    AnswerProposal, ApprovalDelivery, ApprovalQuestion, ApprovalResponse,
+    ApprovalSubscriptionReceipt,
 };
 use signal::Frame;
 
@@ -46,8 +47,11 @@ pub enum Cmd {
         subscription: crate::approval::ApprovalSubscriptionIdentifier,
     },
 
-    /// Submit the psyche's approval answer back to criome.
+    /// Submit the psyche's closed verdict back to criome.
     SubmitApproval { response: ApprovalResponse },
+
+    /// Submit an edited answer as a new object for criome authorization.
+    SubmitAnswerProposal { proposal: AnswerProposal },
 
     /// Ask nexus-daemon to render a typed payload as nexus
     /// text. Reply arrives as

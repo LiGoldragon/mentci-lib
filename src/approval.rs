@@ -144,17 +144,34 @@ impl ApprovalQuestion {
     }
 }
 
-/// Psyche-authored answer text.
+/// Body of a psyche-authored answer proposal.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ApprovalAnswer(String);
+pub struct AnswerBody(String);
 
-impl ApprovalAnswer {
+impl AnswerBody {
     pub fn new(value: impl Into<String>) -> Self {
         Self(value.into())
     }
 
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+}
+
+/// A different answer authored as a separate object.
+///
+/// This is not a verdict variant. The runtime submits it through the normal
+/// authorization path, then the psyche can approve that object's digest with
+/// the same closed verdict set.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AnswerProposal {
+    pub question: ApprovalIdentifier,
+    pub body: AnswerBody,
+}
+
+impl AnswerProposal {
+    pub fn new(question: ApprovalIdentifier, body: AnswerBody) -> Self {
+        Self { question, body }
     }
 }
 
@@ -165,8 +182,6 @@ pub enum ApprovalDecision {
     ApproveSuggestedAnswer,
     /// Reject the proposal.
     Reject,
-    /// Return a different answer.
-    Answer(ApprovalAnswer),
     /// Leave this question pending for later.
     Defer,
 }
@@ -301,14 +316,14 @@ impl ApprovalDelivery {
     }
 }
 
-/// Result of answering a pending question.
+/// Result of recording a closed response to a pending question.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ApprovalAnswerOutcome {
+pub struct ApprovalResponseOutcome {
     pub question: Option<ApprovalQuestion>,
     pub deliveries: Vec<ApprovalDelivery>,
 }
 
-impl ApprovalAnswerOutcome {
+impl ApprovalResponseOutcome {
     pub fn new(question: Option<ApprovalQuestion>, deliveries: Vec<ApprovalDelivery>) -> Self {
         Self {
             question,
@@ -366,10 +381,13 @@ impl ApprovalState {
         self.answer_with_deliveries(response).question
     }
 
-    pub fn answer_with_deliveries(&mut self, response: ApprovalResponse) -> ApprovalAnswerOutcome {
+    pub fn answer_with_deliveries(
+        &mut self,
+        response: ApprovalResponse,
+    ) -> ApprovalResponseOutcome {
         if response.decision == ApprovalDecision::Defer {
             self.select(response.identifier);
-            return ApprovalAnswerOutcome::new(None, Vec::new());
+            return ApprovalResponseOutcome::new(None, Vec::new());
         }
 
         let Some(index) = self
@@ -377,7 +395,7 @@ impl ApprovalState {
             .iter()
             .position(|question| question.identifier == response.identifier)
         else {
-            return ApprovalAnswerOutcome::new(None, Vec::new());
+            return ApprovalResponseOutcome::new(None, Vec::new());
         };
         let question = self.pending.remove(index);
         self.answered.push(response.clone());
@@ -387,7 +405,7 @@ impl ApprovalState {
             .or_else(|| self.pending.last())
             .map(|next| next.identifier);
         let deliveries = self.deliveries_for(ApprovalUpdate::QuestionAnswered(response));
-        ApprovalAnswerOutcome::new(Some(question), deliveries)
+        ApprovalResponseOutcome::new(Some(question), deliveries)
     }
 
     pub fn subscribe(
