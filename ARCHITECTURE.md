@@ -34,7 +34,12 @@ The library every mentci-* GUI shell consumes.
                      │
             ┌────────┼────────┐
             ▼        ▼        ▼
-       mentci-egui mentci-iced mentci-flutter
+       mentci-daemon
+       (state owner)
+             │
+             │ view/event/cmd model
+             ▼
+       mentci-egui mentci-tui mentci-cli
        (thin)     (thin)      (thin + FFI shim)
                      │
                      │ signal (rkyv)
@@ -46,10 +51,11 @@ The library every mentci-* GUI shell consumes.
                  └──────────┘    └──────────────┘
 ```
 
-mentci-lib owns both daemon connections. The shell sees a
-unified "engine" surface; the dual-daemon split is hidden
-from widget code (and revealed in the header view for the
-introspecting human).
+mentci-lib owns the typed state machines that the future Mentci daemon
+will host. UI shells remain thin clients over daemon state: they paint
+`WorkbenchView`, send `UserEvent`, and receive pushed state updates.
+The daemon owns persistence, socket lifecycle, subscriptions, and the
+long-lived criome/nexus-daemon connections.
 
 ## The contract — MVU shaped
 
@@ -67,7 +73,8 @@ The library defines four typed shapes:
   nexus rendering reply, connection state change).
 - **`Cmd`** — produced by `update`; describes side-effects the
   outer runtime dispatches (send a signal frame, ask
-  nexus-daemon to render a payload, schedule a timer).
+  nexus-daemon to render a payload, schedule a timer, publish
+  approval-state updates to subscribed clients).
 
 The `update(state, event) → state, Vec<Cmd>` and
 `view(state) → WorkbenchView` functions are the entire
@@ -81,6 +88,8 @@ Owns:
 - Workbench state machines (per-pane, per-flow).
 - Connection management for both daemons (criome, nexus-daemon).
 - Subscription registration + push demultiplexing.
+- Approval-state subscription and delivery mechanics for the Mentci
+  daemon's programmable UI clients.
 - Schema knowledge that informs constructor flows (compile-time
   today via `signal` types; record-driven once a future schema
   catalogue lands in criome's records database).
@@ -91,14 +100,12 @@ Owns:
   view-state the shell maps to its native palette.
 - Constructor-flow logic for every editing verb.
 
-Future shell-owned state (workbench history, recall last-opened
-workbench, per-user layout preferences) lives in mentci-lib's own
-`sema`-managed redb file — opened either inline through `sema`
-directly or through a future `mentci-sema` typed-table layer (the
-choice follows the same dimensionality test as criome's typed
-tables: inline if the table set stays compact, separate crate if
-it grows). This is library use of `sema`; no daemon, no shared
-database.
+Future daemon-owned state (workbench history, recall last-opened
+workbench, per-user layout preferences, approval queue, client
+subscriptions) lives behind the Mentci daemon. The in-memory library
+state is the shared model and test surface; durable persistence should
+land in the daemon through typed SEMA/redb storage once the daemon
+exists.
 
 Does not own:
 
@@ -155,5 +162,7 @@ All bodies are `todo!()` skeleton-as-design; types are pinned.
 
 ## Status
 
-**Skeleton-as-design.** Lands alongside mentci-egui's first
-running surface.
+**Running model, daemon pending.** The approval queue and subscription
+state are implemented and tested in mentci-lib. The Mentci daemon,
+TUI/CLI socket protocol, and criome key-unlock integration are the next
+production slices.

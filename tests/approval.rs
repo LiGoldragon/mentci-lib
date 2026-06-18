@@ -1,6 +1,7 @@
 use mentci_lib::approval::{
-    ApprovalAnswer, ApprovalContext, ApprovalDecision, ApprovalExplanation, ApprovalIdentifier,
-    ApprovalPrompt, ApprovalQuestion, ApprovalResponse, ApprovalSource, SuggestedAnswer,
+    ApprovalAnswer, ApprovalClientIdentifier, ApprovalContext, ApprovalDecision, ApprovalDelivery,
+    ApprovalExplanation, ApprovalIdentifier, ApprovalInterest, ApprovalPrompt, ApprovalQuestion,
+    ApprovalResponse, ApprovalSource, ApprovalState, ApprovalUpdate, SuggestedAnswer,
 };
 use mentci_lib::{Cmd, EngineEvent, UserEvent, WorkbenchState};
 use signal::{Principal, Slot};
@@ -86,4 +87,158 @@ fn deferring_approval_question_keeps_it_pending() {
     assert_eq!(view.approval.answered_count, 0);
     assert_eq!(view.approval.current, Some(question));
     assert!(commands.is_empty());
+}
+
+#[test]
+fn approval_state_subscription_receives_initial_snapshot() {
+    let mut approval = ApprovalState::default();
+    let question = approval_question(13);
+    approval.receive(question.clone());
+
+    let receipt = approval.subscribe(ApprovalClientIdentifier::new(3), ApprovalInterest::All);
+
+    assert_eq!(
+        receipt.subscription.client,
+        ApprovalClientIdentifier::new(3)
+    );
+    assert_eq!(receipt.snapshot.pending_count, 1);
+    assert_eq!(receipt.snapshot.answered_count, 0);
+    assert_eq!(receipt.snapshot.subscription_count, 1);
+    assert_eq!(receipt.snapshot.current, Some(question));
+}
+
+#[test]
+fn approval_state_broadcasts_question_to_subscribers() {
+    let mut approval = ApprovalState::default();
+    let receipt = approval.subscribe(ApprovalClientIdentifier::new(5), ApprovalInterest::All);
+    let question = approval_question(15);
+
+    let deliveries = approval.receive(question.clone());
+
+    assert_eq!(
+        deliveries,
+        vec![ApprovalDelivery::new(
+            receipt.subscription.identifier,
+            ApprovalClientIdentifier::new(5),
+            ApprovalUpdate::QuestionReceived(question)
+        )]
+    );
+}
+
+#[test]
+fn workbench_publishes_daemon_state_updates_to_approval_subscribers() {
+    let mut workbench = WorkbenchState::new(Slot::<Principal>::from(1));
+    let subscription_commands = workbench.on_user_event(UserEvent::SubscribeApproval {
+        client: ApprovalClientIdentifier::new(8),
+        interest: ApprovalInterest::All,
+    });
+    let receipt = match subscription_commands.as_slice() {
+        [Cmd::ConfirmApprovalSubscription { receipt }] => receipt.clone(),
+        other => panic!("expected one subscription receipt, got {other:?}"),
+    };
+    let question = approval_question(17);
+
+    let commands = workbench.on_engine_event(EngineEvent::ApprovalQuestionArrived {
+        question: question.clone(),
+    });
+
+    match commands.as_slice() {
+        [
+            Cmd::NotifyApproval { question: notified },
+            Cmd::PublishApprovalUpdates { deliveries },
+        ] => {
+            assert_eq!(notified, &question);
+            assert_eq!(
+                deliveries,
+                &vec![ApprovalDelivery::new(
+                    receipt.subscription.identifier,
+                    ApprovalClientIdentifier::new(8),
+                    ApprovalUpdate::QuestionReceived(question)
+                )]
+            );
+        }
+        other => panic!("expected notification and approval-state delivery, got {other:?}"),
+    }
+}
+
+#[test]
+fn selecting_approval_question_broadcasts_daemon_state_update() {
+    let mut workbench = WorkbenchState::new(Slot::<Principal>::from(1));
+    let subscription_commands = workbench.on_user_event(UserEvent::SubscribeApproval {
+        client: ApprovalClientIdentifier::new(13),
+        interest: ApprovalInterest::PendingQuestions,
+    });
+    let receipt = match subscription_commands.as_slice() {
+        [Cmd::ConfirmApprovalSubscription { receipt }] => receipt.clone(),
+        other => panic!("expected one subscription receipt, got {other:?}"),
+    };
+    let first = approval_question(31);
+    let second = approval_question(32);
+    workbench.on_engine_event(EngineEvent::ApprovalQuestionArrived { question: first });
+    workbench.on_engine_event(EngineEvent::ApprovalQuestionArrived {
+        question: second.clone(),
+    });
+
+    let commands = workbench.on_user_event(UserEvent::SelectApproval {
+        identifier: second.identifier,
+    });
+
+    match commands.as_slice() {
+        [Cmd::PublishApprovalUpdates { deliveries }] => {
+            assert_eq!(
+                deliveries,
+                &vec![ApprovalDelivery::new(
+                    receipt.subscription.identifier,
+                    ApprovalClientIdentifier::new(13),
+                    ApprovalUpdate::QuestionSelected(second.identifier)
+                )]
+            );
+        }
+        other => panic!("expected approval-state delivery, got {other:?}"),
+    }
+}
+
+#[test]
+fn answered_response_broadcasts_to_answer_subscriber() {
+    let mut workbench = WorkbenchState::new(Slot::<Principal>::from(1));
+    let subscription_commands = workbench.on_user_event(UserEvent::SubscribeApproval {
+        client: ApprovalClientIdentifier::new(21),
+        interest: ApprovalInterest::AnsweredResponses,
+    });
+    let receipt = match subscription_commands.as_slice() {
+        [Cmd::ConfirmApprovalSubscription { receipt }] => receipt.clone(),
+        other => panic!("expected one subscription receipt, got {other:?}"),
+    };
+    let question = approval_question(23);
+    workbench.on_engine_event(EngineEvent::ApprovalQuestionArrived {
+        question: question.clone(),
+    });
+    let response = ApprovalResponse::new(
+        question.identifier,
+        ApprovalDecision::ApproveSuggestedAnswer,
+    );
+
+    let commands = workbench.on_user_event(UserEvent::AnswerApproval {
+        response: response.clone(),
+    });
+
+    match commands.as_slice() {
+        [
+            Cmd::SubmitApproval {
+                response: submitted,
+            },
+            Cmd::PublishApprovalUpdates { deliveries },
+        ] => {
+            assert_eq!(submitted, &response);
+            assert_eq!(
+                deliveries,
+                &vec![ApprovalDelivery::new(
+                    receipt.subscription.identifier,
+                    ApprovalClientIdentifier::new(21),
+                    ApprovalUpdate::QuestionAnswered(response)
+                )]
+            );
+        }
+        other => panic!("expected submission and approval-state delivery, got {other:?}"),
+    }
 }

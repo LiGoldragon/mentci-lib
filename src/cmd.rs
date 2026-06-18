@@ -5,7 +5,9 @@
 //! side-effects out of the model preserves the MVU
 //! property — `update` is a pure function of `(state, event)`.
 
-use crate::approval::{ApprovalQuestion, ApprovalResponse};
+use crate::approval::{
+    ApprovalDelivery, ApprovalQuestion, ApprovalResponse, ApprovalSubscriptionReceipt,
+};
 use signal::Frame;
 
 /// One side-effect to dispatch.
@@ -30,6 +32,19 @@ pub enum Cmd {
     /// Notify a user-facing client that a new approval question
     /// needs psyche attention.
     NotifyApproval { question: ApprovalQuestion },
+
+    /// Broadcast daemon-owned approval-state updates to subscribed clients.
+    PublishApprovalUpdates { deliveries: Vec<ApprovalDelivery> },
+
+    /// Confirm that a client is now subscribed to approval-state updates.
+    ConfirmApprovalSubscription {
+        receipt: ApprovalSubscriptionReceipt,
+    },
+
+    /// Confirm that a client subscription was removed.
+    ConfirmApprovalUnsubscription {
+        subscription: crate::approval::ApprovalSubscriptionIdentifier,
+    },
 
     /// Submit the psyche's approval answer back to criome.
     SubmitApproval { response: ApprovalResponse },

@@ -263,12 +263,34 @@ impl WorkbenchState {
             UserEvent::ReconnectCriome => vec![Cmd::ConnectCriome],
             UserEvent::ReconnectNexus => vec![Cmd::ConnectNexus],
             UserEvent::SelectApproval { identifier } => {
-                self.approval.select(identifier);
-                Vec::new()
+                let deliveries = self.approval.select_with_deliveries(identifier);
+                if deliveries.is_empty() {
+                    Vec::new()
+                } else {
+                    vec![Cmd::PublishApprovalUpdates { deliveries }]
+                }
+            }
+            UserEvent::SubscribeApproval { client, interest } => {
+                let receipt = self.approval.subscribe(client, interest);
+                vec![Cmd::ConfirmApprovalSubscription { receipt }]
+            }
+            UserEvent::UnsubscribeApproval { subscription } => {
+                if self.approval.unsubscribe(subscription) {
+                    vec![Cmd::ConfirmApprovalUnsubscription { subscription }]
+                } else {
+                    Vec::new()
+                }
             }
             UserEvent::AnswerApproval { response } => {
-                if self.approval.answer(response.clone()).is_some() {
-                    vec![Cmd::SubmitApproval { response }]
+                let outcome = self.approval.answer_with_deliveries(response.clone());
+                if outcome.question.is_some() {
+                    let mut commands = vec![Cmd::SubmitApproval { response }];
+                    if !outcome.deliveries.is_empty() {
+                        commands.push(Cmd::PublishApprovalUpdates {
+                            deliveries: outcome.deliveries,
+                        });
+                    }
+                    commands
                 } else {
                     Vec::new()
                 }
@@ -334,8 +356,12 @@ impl WorkbenchState {
                 Vec::new()
             }
             EngineEvent::ApprovalQuestionArrived { question } => {
-                self.approval.receive(question.clone());
-                vec![Cmd::NotifyApproval { question }]
+                let deliveries = self.approval.receive(question.clone());
+                let mut commands = vec![Cmd::NotifyApproval { question }];
+                if !deliveries.is_empty() {
+                    commands.push(Cmd::PublishApprovalUpdates { deliveries });
+                }
+                commands
             }
             // All other engine events unhandled in this
             // skeleton pass; bodies fill in as the wire wires

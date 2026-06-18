@@ -34,11 +34,19 @@ dual-daemon connection management. The shells stay thin.
   rendering primitives live in each shell. The signal protocol
   lives in `signal` and is consumed here, not redefined; Sema state
   is owned by criome, not here.
-- **Library use of state, never a daemon or shared database.**
-  Future shell-owned state lives in mentci-lib's own `sema`-managed
-  redb file (inline, or a future `mentci-sema` typed-table layer
-  per the same dimensionality test criome uses) — library use of
-  `sema`, no daemon, no shared database.
+- **Daemon-owned state, shared library implementation.** Mentci is
+  becoming a daemon-owned programmable UI surface: state changes in the
+  daemon, and every UI client paints daemon state. `mentci-lib` owns the
+  typed state machines and subscription model that the daemon and thin
+  clients share; the daemon will own persistence, sockets, key-unlock
+  flow, and long-lived runtime lifecycle.
+- **Programmable client surface.** TUI, CLI, egui, editor integrations,
+  status bars, popups, email bridges, and agentic flows are clients over
+  the same Mentci daemon state. They subscribe to updates and submit
+  responses rather than owning separate approval logic.
+- **Criome owns the key store.** Mentci interacts heavily with the local
+  criome instance for escalations and key-unlock/use. The key store is a
+  criome concern; Mentci presents the human approval/key-unlock surface.
 
 ## Stack discipline
 

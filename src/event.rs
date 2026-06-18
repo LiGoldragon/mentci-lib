@@ -4,7 +4,10 @@
 //! Closed enums; one variant per kind of event. Adding a new
 //! gesture or engine push grows the appropriate enum.
 
-use crate::approval::{ApprovalQuestion, ApprovalResponse};
+use crate::approval::{
+    ApprovalClientIdentifier, ApprovalInterest, ApprovalQuestion, ApprovalResponse,
+    ApprovalSubscriptionIdentifier,
+};
 use signal::{AnyKind, Frame, Graph, Node, Slot};
 
 /// What the shell forwards when the user does something.
@@ -142,6 +145,15 @@ pub enum UserEvent {
     /// Select a pending approval question.
     SelectApproval {
         identifier: crate::approval::ApprovalIdentifier,
+    },
+    /// Subscribe one client to daemon-owned approval-state changes.
+    SubscribeApproval {
+        client: ApprovalClientIdentifier,
+        interest: ApprovalInterest,
+    },
+    /// Remove one approval-state subscription.
+    UnsubscribeApproval {
+        subscription: ApprovalSubscriptionIdentifier,
     },
     /// Answer a pending approval question.
     AnswerApproval {
