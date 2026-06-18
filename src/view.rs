@@ -4,6 +4,7 @@
 //! [`crate::state::WorkbenchState::view`] method. The shell
 //! reads this and paints; it does not reach into the state.
 
+use crate::approval::ApprovalView;
 use crate::canvas::CanvasView;
 use crate::connection::ConnectionView;
 use crate::constructor::ConstructorView;
@@ -31,6 +32,8 @@ pub struct WorkbenchView {
     /// in-place, retract confirm, batch composer). At most
     /// one at a time.
     pub constructor: Option<ConstructorView>,
+    /// Psyche approval questions awaiting answer.
+    pub approval: ApprovalView,
 }
 
 /// Header showing both daemon connections and global toggles.

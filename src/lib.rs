@@ -17,6 +17,7 @@
 //!
 //! The library is the application; each shell is the rendering.
 
+pub mod approval;
 pub mod canvas;
 pub mod cmd;
 pub mod connection;
@@ -32,8 +33,8 @@ pub mod theme;
 pub mod view;
 pub mod wire;
 
+pub use cmd::Cmd;
 pub use error::{Error, Result};
+pub use event::{EngineEvent, UserEvent};
 pub use state::WorkbenchState;
 pub use view::WorkbenchView;
-pub use event::{EngineEvent, UserEvent};
-pub use cmd::Cmd;

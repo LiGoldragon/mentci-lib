@@ -4,6 +4,7 @@
 //! Closed enums; one variant per kind of event. Adding a new
 //! gesture or engine push grows the appropriate enum.
 
+use crate::approval::{ApprovalQuestion, ApprovalResponse};
 use signal::{AnyKind, Frame, Graph, Node, Slot};
 
 /// What the shell forwards when the user does something.
@@ -11,13 +12,21 @@ use signal::{AnyKind, Frame, Graph, Node, Slot};
 pub enum UserEvent {
     // ── selection ──────────────────────────────────────────
     /// Pick a Graph in the GraphsNav.
-    SelectGraph { slot: Slot<Graph> },
+    SelectGraph {
+        slot: Slot<Graph>,
+    },
     /// Pick any slot — Node, Edge, or another record kind.
-    SelectSlot { slot: Slot<AnyKind> },
+    SelectSlot {
+        slot: Slot<AnyKind>,
+    },
     /// Pin a slot to keep it visible across selections.
-    PinSlot { slot: Slot<AnyKind> },
+    PinSlot {
+        slot: Slot<AnyKind>,
+    },
     /// Unpin a previously pinned slot.
-    UnpinSlot { slot: Slot<AnyKind> },
+    UnpinSlot {
+        slot: Slot<AnyKind>,
+    },
 
     // ── canvas: flow-graph gestures ────────────────────────
     /// Open the new-node constructor flow. Triggered by an
@@ -26,34 +35,61 @@ pub enum UserEvent {
     OpenNewNodeFlow,
     /// Begin dragging a new box onto the canvas. Position +
     /// kind picked from the palette.
-    BeginDragNewBox { graph: Slot<Graph>, kind: NodeKindHint, at: CanvasPos },
+    BeginDragNewBox {
+        graph: Slot<Graph>,
+        kind: NodeKindHint,
+        at: CanvasPos,
+    },
     /// Mouse moves while dragging.
-    UpdateDragNewBox { at: CanvasPos },
+    UpdateDragNewBox {
+        at: CanvasPos,
+    },
     /// Drop the new box. Triggers the constructor flow modal.
-    DropDragNewBox { at: CanvasPos },
+    DropDragNewBox {
+        at: CanvasPos,
+    },
 
     /// Begin dragging a wire from a node.
-    BeginDragWire { from: Slot<Node>, at: CanvasPos },
+    BeginDragWire {
+        from: Slot<Node>,
+        at: CanvasPos,
+    },
     /// Mouse moves while dragging the wire end.
-    UpdateDragWire { at: CanvasPos },
+    UpdateDragWire {
+        at: CanvasPos,
+    },
     /// Drop the wire on a target. Triggers the edge constructor flow.
-    DropDragWire { onto: Slot<Node> },
+    DropDragWire {
+        onto: Slot<Node>,
+    },
 
     // ── canvas: any-kind gestures ──────────────────────────
     /// Move a node on the canvas. Generates a Mutate to its
     /// position record on commit.
-    MoveNode { slot: Slot<Node>, to: CanvasPos },
+    MoveNode {
+        slot: Slot<Node>,
+        to: CanvasPos,
+    },
     /// Pan the canvas viewport.
-    PanCanvas { delta: CanvasDelta },
+    PanCanvas {
+        delta: CanvasDelta,
+    },
     /// Zoom the canvas viewport.
-    ZoomCanvas { factor: f32, anchor: CanvasPos },
+    ZoomCanvas {
+        factor: f32,
+        anchor: CanvasPos,
+    },
     /// Scrub time on a kind whose canvas is time-anchored
     /// (astrological chart, timeline, calendar, …).
-    ScrubTime { delta: TimeDelta },
+    ScrubTime {
+        delta: TimeDelta,
+    },
 
     // ── constructor flow ───────────────────────────────────
     /// Update a field in the current constructor flow modal.
-    ConstructorFieldChanged { field: ConstructorField },
+    ConstructorFieldChanged {
+        field: ConstructorField,
+    },
     /// Commit the current constructor flow.
     ConstructorCommit,
     /// Cancel the current constructor flow.
@@ -62,15 +98,23 @@ pub enum UserEvent {
     // ── inspector / rename ─────────────────────────────────
     /// Begin editing a record's display name in place. Rename
     /// works on any kind, so the slot is type-erased here.
-    BeginRename { slot: Slot<AnyKind> },
+    BeginRename {
+        slot: Slot<AnyKind>,
+    },
     /// Commit a renamed value.
-    CommitRename { slot: Slot<AnyKind>, new_name: String, expected_rev: signal::Revision },
+    CommitRename {
+        slot: Slot<AnyKind>,
+        new_name: String,
+        expected_rev: signal::Revision,
+    },
     /// Cancel a rename in progress.
     CancelRename,
 
     /// Retract a record (Node, Edge, …). Surfaces a confirm
     /// flow before the verb is sent.
-    RequestRetract { slot: Slot<AnyKind> },
+    RequestRetract {
+        slot: Slot<AnyKind>,
+    },
 
     // ── pane toggles ───────────────────────────────────────
     ToggleWirePane,
@@ -80,15 +124,29 @@ pub enum UserEvent {
 
     // ── diagnostics ────────────────────────────────────────
     ClearDiagnostics,
-    JumpToDiagnosticTarget { diagnostic_id: u64 },
+    JumpToDiagnosticTarget {
+        diagnostic_id: u64,
+    },
 
     // ── wire pane ──────────────────────────────────────────
-    SetWireFilter { filter: WireFilter },
+    SetWireFilter {
+        filter: WireFilter,
+    },
 
     // ── connection management ──────────────────────────────
     /// User asked to reconnect a dropped daemon.
     ReconnectCriome,
     ReconnectNexus,
+
+    // ── psyche approval ────────────────────────────────────
+    /// Select a pending approval question.
+    SelectApproval {
+        identifier: crate::approval::ApprovalIdentifier,
+    },
+    /// Answer a pending approval question.
+    AnswerApproval {
+        response: ApprovalResponse,
+    },
 }
 
 /// What the runtime raises when something arrives from
@@ -96,30 +154,62 @@ pub enum UserEvent {
 #[derive(Debug, Clone)]
 pub enum EngineEvent {
     // ── connection lifecycle ───────────────────────────────
-    CriomeConnected { protocol_version: String },
-    CriomeDisconnected { reason: String },
-    NexusConnected { protocol_version: String },
-    NexusDisconnected { reason: String },
+    CriomeConnected {
+        protocol_version: String,
+    },
+    CriomeDisconnected {
+        reason: String,
+    },
+    NexusConnected {
+        protocol_version: String,
+    },
+    NexusDisconnected {
+        reason: String,
+    },
 
     // ── criome traffic ─────────────────────────────────────
     /// A subscription delivered records.
-    SubscriptionPush { sub_id: u64, records: signal::Records },
+    SubscriptionPush {
+        sub_id: u64,
+        records: signal::Records,
+    },
     /// An outcome arrived for a previously sent edit.
-    OutcomeArrived { req_id: u64, outcome: signal::OutcomeMessage },
+    OutcomeArrived {
+        req_id: u64,
+        outcome: signal::OutcomeMessage,
+    },
     /// A typed query reply arrived.
-    QueryReplied { req_id: u64, records: signal::Records },
+    QueryReplied {
+        req_id: u64,
+        records: signal::Records,
+    },
     /// A diagnostic carried in any reply.
-    DiagnosticEmitted { diagnostic: signal::Diagnostic },
+    DiagnosticEmitted {
+        diagnostic: signal::Diagnostic,
+    },
     /// Frame seen on the wire (every direction).
-    FrameSeen { direction: FrameDirection, frame: Frame },
+    FrameSeen {
+        direction: FrameDirection,
+        frame: Frame,
+    },
+    /// Criome or an agent asked the psyche for an approval.
+    ApprovalQuestionArrived {
+        question: ApprovalQuestion,
+    },
 
     // ── nexus-daemon traffic ───────────────────────────────
     /// A nexus rendering arrived for a previously dispatched
     /// render request.
-    NexusRendered { ticket: u64, text: String },
+    NexusRendered {
+        ticket: u64,
+        text: String,
+    },
     /// A nexus parse arrived (used for completeness; humans
     /// don't author nexus, but the path stays exercised).
-    NexusParsed { ticket: u64, frame: Frame },
+    NexusParsed {
+        ticket: u64,
+        frame: Frame,
+    },
 }
 
 /// Direction a frame moved on the wire.

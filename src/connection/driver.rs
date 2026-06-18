@@ -33,18 +33,17 @@
 
 use std::path::PathBuf;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::UnixStream;
+use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::runtime::Handle;
 use tokio::sync::mpsc;
 
 use signal::{
-    Body, Frame, HandshakeRequest, OutcomeMessage, Records, Reply, Request,
-    SIGNAL_PROTOCOL_VERSION,
+    Body, Frame, HandshakeRequest, OutcomeMessage, Records, Reply, Request, SIGNAL_PROTOCOL_VERSION,
 };
 
-use crate::event::FrameDirection;
 use crate::EngineEvent;
+use crate::event::FrameDirection;
 
 /// Which daemon this driver targets. Determines which event
 /// variants the driver emits and which socket it dials.
@@ -58,7 +57,7 @@ pub enum DaemonRole {
 #[derive(Debug)]
 pub enum DriverCmd {
     /// Send a typed signal frame on the wire.
-    SendFrame(Frame),
+    SendFrame(Box<Frame>),
     /// Cleanly close the connection (driver loop exits).
     Disconnect,
 }
@@ -72,11 +71,7 @@ pub struct ConnectionHandle {
 /// Spawn a driver task on the supplied tokio runtime. Returns
 /// immediately with a handle. The driver's first action is to
 /// dial the socket, then exchange a Handshake.
-pub fn spawn_driver(
-    runtime: &Handle,
-    socket_path: PathBuf,
-    role: DaemonRole,
-) -> ConnectionHandle {
+pub fn spawn_driver(runtime: &Handle, socket_path: PathBuf, role: DaemonRole) -> ConnectionHandle {
     let (events_tx, events_rx) = mpsc::unbounded_channel();
     let (cmds_tx, cmds_rx) = mpsc::unbounded_channel();
     runtime.spawn(driver_loop(socket_path, role, events_tx, cmds_rx));
@@ -123,10 +118,7 @@ async fn driver_loop(
     let reply = match read_frame(&mut read_half).await {
         Ok(f) => f,
         Err(e) => {
-            let _ = events_tx.send(disconnect_event(
-                role,
-                format!("read handshake reply: {e}"),
-            ));
+            let _ = events_tx.send(disconnect_event(role, format!("read handshake reply: {e}")));
             return;
         }
     };
@@ -194,9 +186,9 @@ async fn driver_loop(
                     Some(DriverCmd::SendFrame(frame)) => {
                         let _ = events_tx.send(EngineEvent::FrameSeen {
                             direction: FrameDirection::Out,
-                            frame: frame.clone(),
+                            frame: frame.as_ref().clone(),
                         });
-                        if let Err(e) = write_frame(&mut write_half, &frame).await {
+                        if let Err(e) = write_frame(&mut write_half, frame.as_ref()).await {
                             disconnect_reason = Some(format!("write: {e}"));
                             break;
                         }
@@ -211,7 +203,7 @@ async fn driver_loop(
     let reason = disconnect_reason.unwrap_or_else(|| "loop ended".into());
     let _ = events_tx.send(disconnect_event(role, reason));
     let _ = next_req_id; // keep linter quiet — req-id pairing
-                        // matures alongside subscription work.
+    // matures alongside subscription work.
 }
 
 /// Translate an inbound reply frame into the appropriate
@@ -241,10 +233,7 @@ fn emit_inbound_typed(
         Reply::Outcome(outcome) => {
             let req_id = *next_reply_id;
             *next_reply_id += 1;
-            let _ = events_tx.send(EngineEvent::OutcomeArrived {
-                req_id,
-                outcome,
-            });
+            let _ = events_tx.send(EngineEvent::OutcomeArrived { req_id, outcome });
         }
         Reply::Outcomes(outcomes) => {
             let req_id = *next_reply_id;
@@ -264,10 +253,7 @@ fn emit_inbound_typed(
             // sub-ids and emit SubscriptionPush instead when
             // the position belongs to a subscription rather
             // than a one-shot query.
-            let _ = events_tx.send(EngineEvent::QueryReplied {
-                req_id,
-                records,
-            });
+            let _ = events_tx.send(EngineEvent::QueryReplied { req_id, records });
         }
     }
 }
@@ -285,9 +271,8 @@ async fn read_frame(read: &mut OwnedReadHalf) -> std::io::Result<Frame> {
     let length = u32::from_be_bytes(length_bytes) as usize;
     let mut frame_bytes = vec![0u8; length];
     read.read_exact(&mut frame_bytes).await?;
-    Frame::decode(&frame_bytes).map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::InvalidData, format!("{e:?}"))
-    })
+    Frame::decode(&frame_bytes)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, format!("{e:?}")))
 }
 
 async fn write_frame(write: &mut OwnedWriteHalf, frame: &Frame) -> std::io::Result<()> {

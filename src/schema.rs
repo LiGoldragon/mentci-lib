@@ -43,11 +43,7 @@ pub trait SchemaSource {
     /// Which `RelationKind` variants are valid as edges
     /// between a given source-kind and target-kind. When
     /// empty, the pair is meaningless.
-    fn valid_relation_kinds(
-        &self,
-        source_kind: &str,
-        target_kind: &str,
-    ) -> Vec<RelationKind>;
+    fn valid_relation_kinds(&self, source_kind: &str, target_kind: &str) -> Vec<RelationKind>;
 }
 
 /// Description of one field on a record-kind. Used by the
@@ -92,11 +88,7 @@ impl SchemaSource for CompiledSchema {
         todo!()
     }
 
-    fn valid_relation_kinds(
-        &self,
-        _source_kind: &str,
-        _target_kind: &str,
-    ) -> Vec<RelationKind> {
+    fn valid_relation_kinds(&self, _source_kind: &str, _target_kind: &str) -> Vec<RelationKind> {
         todo!()
     }
 }

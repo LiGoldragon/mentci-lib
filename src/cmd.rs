@@ -5,6 +5,7 @@
 //! side-effects out of the model preserves the MVU
 //! property — `update` is a pure function of `(state, event)`.
 
+use crate::approval::{ApprovalQuestion, ApprovalResponse};
 use signal::Frame;
 
 /// One side-effect to dispatch.
@@ -26,10 +27,20 @@ pub enum Cmd {
     /// Close + drop the nexus-daemon connection.
     DisconnectNexus,
 
+    /// Notify a user-facing client that a new approval question
+    /// needs psyche attention.
+    NotifyApproval { question: ApprovalQuestion },
+
+    /// Submit the psyche's approval answer back to criome.
+    SubmitApproval { response: ApprovalResponse },
+
     /// Ask nexus-daemon to render a typed payload as nexus
     /// text. Reply arrives as
     /// [`crate::event::EngineEvent::NexusRendered`].
-    RenderViaNexus { ticket: u64, payload: NexusRenderRequest },
+    RenderViaNexus {
+        ticket: u64,
+        payload: NexusRenderRequest,
+    },
 
     /// Schedule a timer that fires once after `ms` milliseconds.
     /// Used sparingly — the workbench is push-driven, not
@@ -43,7 +54,10 @@ pub enum Cmd {
 #[derive(Debug, Clone)]
 pub enum NexusRenderRequest {
     /// Render a complete record.
-    Record { kind: String, content_hash: signal::Hash },
+    Record {
+        kind: String,
+        content_hash: signal::Hash,
+    },
     /// Render a typed verb body.
     Verb {
         verb_name: String,

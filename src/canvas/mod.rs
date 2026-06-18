@@ -62,7 +62,11 @@ pub struct Viewport {
 
 impl Default for Viewport {
     fn default() -> Self {
-        Self { center_x: 0.0, center_y: 0.0, zoom: 1.0 }
+        Self {
+            center_x: 0.0,
+            center_y: 0.0,
+            zoom: 1.0,
+        }
     }
 }
 

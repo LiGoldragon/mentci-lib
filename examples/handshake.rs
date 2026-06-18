@@ -13,11 +13,11 @@
 //! cargo run --example handshake
 //! ```
 
-use mentci_lib::connection::driver::{spawn_driver, DaemonRole, DriverCmd};
 use mentci_lib::WorkbenchState;
+use mentci_lib::connection::driver::{DaemonRole, DriverCmd, spawn_driver};
 use signal::{
-    AssertOperation, AuthProof, Body, Edge, EdgeQuery, Frame, Graph, GraphQuery, Node,
-    NodeQuery, PatternField, QueryOperation, RelationKind, Request, Slot,
+    AssertOperation, AuthProof, Body, Edge, EdgeQuery, Frame, Graph, GraphQuery, Node, NodeQuery,
+    PatternField, QueryOperation, RelationKind, Request, Slot,
 };
 use std::path::PathBuf;
 use std::time::Duration;
@@ -55,9 +55,15 @@ async fn main() {
             edges: vec![],
             subgraphs: vec![],
         }),
-        AssertOperation::Node(Node { name: "ticks".to_string() }),
-        AssertOperation::Node(Node { name: "double".to_string() }),
-        AssertOperation::Node(Node { name: "stdout".to_string() }),
+        AssertOperation::Node(Node {
+            name: "ticks".to_string(),
+        }),
+        AssertOperation::Node(Node {
+            name: "double".to_string(),
+        }),
+        AssertOperation::Node(Node {
+            name: "stdout".to_string(),
+        }),
         AssertOperation::Edge(Edge {
             from: Slot::from(1024u64),
             to: Slot::from(1025u64),
@@ -71,14 +77,18 @@ async fn main() {
             auth_proof: Some(AuthProof::SingleOperator),
             body: Body::Request(Request::Assert(op)),
         };
-        let _ = handle.cmds_tx.send(DriverCmd::SendFrame(frame));
+        let _ = handle.cmds_tx.send(DriverCmd::SendFrame(Box::new(frame)));
     }
     drain_into_model(&mut handle, &mut workbench, Duration::from_millis(500)).await;
 
     // ── Phase 3: re-query to refresh the cache ─────────────
     let queries = [
-        QueryOperation::Graph(GraphQuery { title: PatternField::Wildcard }),
-        QueryOperation::Node(NodeQuery { name: PatternField::Wildcard }),
+        QueryOperation::Graph(GraphQuery {
+            title: PatternField::Wildcard,
+        }),
+        QueryOperation::Node(NodeQuery {
+            name: PatternField::Wildcard,
+        }),
         QueryOperation::Edge(EdgeQuery {
             from: PatternField::Wildcard,
             to: PatternField::Wildcard,
@@ -91,7 +101,7 @@ async fn main() {
             auth_proof: Some(AuthProof::SingleOperator),
             body: Body::Request(Request::Query(op)),
         };
-        let _ = handle.cmds_tx.send(DriverCmd::SendFrame(frame));
+        let _ = handle.cmds_tx.send(DriverCmd::SendFrame(Box::new(frame)));
     }
     drain_into_model(&mut handle, &mut workbench, Duration::from_millis(500)).await;
 
@@ -121,7 +131,9 @@ async fn drain_into_model(
                     let cmds = workbench.on_engine_event(ev);
                     for cmd in cmds {
                         if let mentci_lib::Cmd::SendCriome { frame } = cmd {
-                            let _ = handle.cmds_tx.send(DriverCmd::SendFrame(frame));
+                            let _ = handle
+                                .cmds_tx
+                                .send(DriverCmd::SendFrame(Box::new(frame)));
                         }
                     }
                 }
