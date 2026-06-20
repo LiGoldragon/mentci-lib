@@ -477,6 +477,7 @@ dependencies = [
 [[package]]
 name = "signal-mentci"
 version = "0.1.0"
+source = "git+https://github.com/LiGoldragon/signal-mentci?branch=main#58dd5a26d9b2e64a98fb64d30ac44ba0d3febe8e"
 dependencies = [
  "nota-next",
  "rkyv",

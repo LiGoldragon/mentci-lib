@@ -16,16 +16,6 @@ meta-signal-criome = { git = "https://github.com/LiGoldragon/meta-signal-criome"
 nota-next          = { git = "https://github.com/LiGoldragon/nota-next.git", branch = "main", optional = true }
 thiserror          = "2"
 
-# DESIGNER PROTOTYPE SCAFFOLD (criome-E1 style). The shared observability
-# model needs public READERS on signal-mentci's projected interface state
-# (pending_questions, panes, notification, suggested_answer, context) which the
-# operator's main does not yet expose. They are added on a matching
-# signal-mentci feature branch in a sibling worktree; this patch consumes that
-# branch by local path until the operator merges the readers and the dependency
-# falls back to the plain git source. Note this scaffold at integration.
-[patch."https://github.com/LiGoldragon/signal-mentci"]
-signal-mentci = { path = "/home/li/wt/github.com/LiGoldragon/signal-mentci/re-found-on-live-contracts" }
-
 [features]
 default     = []
 # NOTA projection of typed payloads (the render-typed-replies-and-unknown-
