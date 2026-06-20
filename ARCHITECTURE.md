@@ -1,184 +1,134 @@
 # ARCHITECTURE — mentci-lib
 
-Shared application and state-machine logic for the Mentci interaction
-surface. The future `mentci` daemon and every thin Mentci client consume
-this library.
+The shared observability + control model for the Mentci component. The
+`mentci` daemon and every thin Mentci client (mentci-egui first) consume
+this one model so canonical daemon state and painted client state cannot
+drift.
 
-> **Scope.** Any "sema" reference here is today's `sema` library
-> (rename pending → `sema-db`); any "criome" reference is today's
-> `criome` daemon. The eventual `Sema` / `Criome` are broader; this
-> library is a realization step on today's stack. See
-> `~/primary/ESSENCE.md` §"Today and eventually".
+This crate was re-founded on the LIVE contracts (forensic sub-report 5;
+Spirit 7x5z). The original 2026-04-29 design predated the daemon and
+`signal-mentci` by ~50 days and was built on a graph-signal transport
+(Graph / Node / Edge / Slot / Handshake) that never shipped, a
+non-existent dual-daemon `DaemonRole::Criome/Nexus` model, and a
+hand-rolled approval vocabulary that `signal-mentci` now owns. The
+valuable shape survived the rebase: the MVU model-view-update contract,
+edits-as-proposals, and the approval state machine.
 
-## Role in the sema-ecosystem
-
-```
-              ┌──────────────────────────────────┐
-              │          mentci-lib              │
-              │                                  │
-              │  SHARED APPLICATION LOGIC        │
-              │   (workbench state machines,     │
-              │    constructor flows, schema     │
-              │    knowledge, theme/layout       │
-              │    interpretation, approval      │
-              │    subscriptions)                │
-              │                                  │
-              │  EXPOSES                         │
-              │   • WorkbenchView (data out)     │
-              │   • UserEvent / EngineEvent      │
-              │     (data in)                    │
-              │   • Cmd (side-effects to         │
-              │     dispatch externally)         │
-              └──────┬───────────────────────────┘
-                     │
-                     │ thin contract
-                     │
-            ┌────────┼────────┐
-            ▼        ▼        ▼
-       mentci component triad
-       ├─ mentci daemon repo
-       ├─ signal-mentci contract
-       └─ meta-signal-mentci contract
-             │
-             │ view/event/cmd model
-             ▼
-       mentci-egui mentci-tui mentci-cli
-       (thin)     (thin)      (thin + FFI shim)
-                     │
-                     │ signal (rkyv)
-                     ▼
-                 ┌──────────┐    ┌──────────────┐
-                 │  criome  │    │ nexus-daemon │
-                 │ (state)  │    │ (rendering   │
-                 │          │    │  service)    │
-                 └──────────┘    └──────────────┘
-```
-
-Mentci is a first-class component triad. The `mentci` daemon repository
-will hold the daemon, thin CLI, and daemon-local Signal/Nexus/SEMA
-runtime schemas. `signal-mentci` will hold the ordinary programmable-UI
-wire vocabulary; `meta-signal-mentci` will hold startup configuration
-and reconfiguration vocabulary.
-
-mentci-lib owns the typed state machines that the future Mentci daemon
-will host. UI shells remain thin clients over daemon state: they paint
-`WorkbenchView`, send `UserEvent`, and receive pushed state updates.
-The daemon owns persistence, socket lifecycle, subscriptions, and the
-long-lived criome connection.
-
-## The contract — MVU shaped
-
-The library defines four typed shapes:
-
-- **`WorkbenchState`** — owned by mentci-lib; the model. Holds
-  per-pane sub-states, the active constructor flow (if any),
-  connection state, the principal whose tweaks are applied.
-- **`WorkbenchView`** — derived from state; the snapshot the
-  shell paints each frame (or each change). Pure data.
-- **`UserEvent`** — produced by the shell when the user does
-  something. Closed enum of every gesture mentci-lib accepts.
-- **`EngineEvent`** — produced internally when a daemon
-  pushes (subscription update, outcome arrival, diagnostic,
-  nexus rendering reply, connection state change).
-- **`Cmd`** — produced by `update`; describes side-effects the
-  outer runtime dispatches (send a signal frame, ask
-  nexus-daemon to render a payload, schedule a timer, publish
-  approval-state updates to subscribed clients).
-
-The `update(state, event) → state, Vec<Cmd>` and
-`view(state) → WorkbenchView` functions are the entire
-surface. Time-travel debugging (record the event log; replay)
-is a property of the shape.
-
-## Boundaries
-
-Owns:
-
-- Workbench state machines (per-pane, per-flow).
-- Shared connection-state records used by the daemon and clients.
-- Subscription registration + push demultiplexing.
-- Approval-state subscription and delivery mechanics for the Mentci
-  daemon's programmable UI clients.
-- Closed-verdict approval modeling: approve suggested answer, reject, or
-  defer. Edited answers are separate typed `AnswerProposal` objects for
-  criome authorization, not verdict variants.
-- Schema knowledge that informs constructor flows (compile-time
-  today via `signal` types; record-driven once a future schema
-  catalogue lands in criome's records database).
-- Per-kind canvas renderers that produce kind-specific
-  view-state for the shell to paint.
-- Theme + layout interpretation — translates `Theme`,
-  `Layout`, and related records into semantic-intent
-  view-state the shell maps to its native palette.
-- Constructor-flow logic for every editing verb.
-
-Future daemon-owned state (workbench history, recall last-opened
-workbench, per-user layout preferences, approval queue, client
-subscriptions) lives behind the Mentci daemon. The in-memory library
-state is the shared model and test surface; durable persistence lands in
-the `mentci` daemon through typed SEMA/redb storage once the daemon
-exists.
-
-Does not own:
-
-- The Mentci wire contracts — `signal-mentci` and
-  `meta-signal-mentci`; this library consumes the generated types once
-  those repositories exist.
-- Criome authorization/key-store state — owned by criome. Mentci has its
-  own UI state; criome owns the key store and signing authority Mentci
-  asks to use.
-- Any rendering primitives — those live in each shell.
-- Any GUI-library types — egui, iced, Flutter widgets, etc.,
-  do not appear in this crate.
-
-## Code map
+## What the crate IS now
 
 ```
-src/
-├── lib.rs           — module entry + re-exports
-├── error.rs         — Error enum (typed; thiserror)
-├── state.rs         — WorkbenchState (the model)
-├── view.rs          — WorkbenchView (per-frame snapshot)
-├── event.rs         — UserEvent + EngineEvent
-├── cmd.rs           — Cmd (side-effects to dispatch)
-├── connection.rs    — CriomeLink + NexusLink (dual-daemon)
-├── canvas/
-│   ├── mod.rs       — CanvasView dispatch + per-kind renderer
-│   │                  trait
-│   └── flow_graph.rs — first canvas renderer (Graph + Node +
-│                       Edge → flow-graph view-state)
-├── constructor.rs   — schema-aware action flows for verbs
-│                      (drag-new-box, drag-wire, rename,
-│                      retract, batch)
-├── schema.rs        — schema knowledge (signal types →
-│                      constructor-flow descriptions); compile-
-│                      time today, sema-driven later
-├── inspector.rs     — inspector view-state (slot detail +
-│                      history)
-├── diagnostics.rs   — diagnostics view-state
-├── wire.rs          — wire pane view-state (signal frames)
-├── theme.rs         — theme record interpretation
-└── layout.rs        — layout record interpretation
+            ┌──────────────────────────────────────────┐
+            │              mentci-lib                   │
+            │   SHARED OBSERVABILITY + CONTROL MODEL    │
+            │                                           │
+            │  observation::ObservationModel  (MVU)     │
+            │    keyed by ComponentSocketKind           │
+            │    update(state, event) -> Vec<Cmd>       │
+            │    view(state) -> ObservationView         │
+            │                                           │
+            │  approval::ApprovalModel                  │
+            │    pending queue + selection cursor       │
+            │    + local subscription fan-out           │
+            │    + edits-as-proposals                   │
+            │                                           │
+            │  render::RenderNota                       │
+            │    NOTA-fallback for typed replies/objects│
+            │                                           │
+            │  decision::CriomeVerdict                  │
+            │    closed ApprovalDecision -> criome      │
+            │    AuthorizationApprovalDecision (t00s)   │
+            └───────────┬───────────────────────────────┘
+                        │ consumes the live contracts
+        ┌───────────────┼───────────────┬───────────────┐
+        ▼               ▼               ▼               ▼
+   signal-mentci   meta-signal-    signal-criome   meta-signal-
+   (working wire)   mentci          (AuthRequest-   criome
+   ApprovalQuestion (ComponentS-    Slot)           (AuthApproval-
+   InterfaceState   ocketKind)                      Decision)
+   ProjectedI-fcSt  Configure
+   MentciEvent
 ```
 
-All bodies are `todo!()` skeleton-as-design; types are pinned.
+## The MVU contract
 
-## Cross-cutting context
+The whole surface is two methods on `ObservationModel`:
 
-- Project intent:
-  lore/INTENTION.md
-- Project-wide architecture:
-  criome/ARCHITECTURE.md
-- The first design report:
-  workspace/reports/111-first-mentci-ui-introspection-2026-04-29.md
-- The first GUI shell:
-  mentci-egui
+- `on_user_event(UserEvent) -> Vec<Cmd>` and
+  `on_engine_event(EngineEvent) -> Vec<Cmd>` — the `update` half.
+- `view() -> ObservationView` — the pure-data snapshot the shell paints.
 
-## Status
+Side-effects never run inside the model; a `Cmd` describes a
+`signal-mentci` request addressed to a `ComponentSocketKind`, and the
+outer runtime owns the `signal-frame` transport that turns it into a
+`MentciFrame`. Keeping side-effects out is the MVU property:
+`update` is a pure function of `(state, event)`.
 
-**Running model, contract triad bootstrapped locally.** The approval
-queue and subscription state are implemented and tested in mentci-lib.
-Local main checkouts now exist for `signal-mentci` and
-`meta-signal-mentci`; remote creation and the `mentci` daemon repository
-are still the next production slices. The TUI/CLI socket protocol and
-criome key-unlock integration remain pending.
+## Keyed by component socket
+
+`ObservationModel` holds one `SocketObservation` per
+`ComponentSocketKind` (`Mentci`, `MetaMentci`, `Criome`, `MetaCriome`
+from `meta-signal-mentci` / signal-standard). Each slot carries the
+interest it subscribed with, the daemon-minted `SubscriptionToken`, the
+latest `ProjectedInterfaceState`, and the connection liveness. Mentci
+can observe its own canonical state AND a criome peer on independent
+connections, folding each into its own slot.
+
+## Approval state machine (kept, rebased)
+
+`ApprovalModel` consumes `signal-mentci`'s OWN approval vocabulary —
+`ApprovalQuestion`, `ApprovalDecision`, `ApprovalVerdict`,
+`AnswerProposal` — never a duplicate. It owns the *client-side* logic the
+contract does not: the pending-question cursor (mirrored from the
+daemon's projected queue), local subscription fan-out for thin surfaces
+(status bar, popup, approval pane), and the closed-verdict +
+edits-as-proposals constructors. The daemon still owns minting question
+identifiers and the canonical `InterfaceState`; the model reads the
+projected slice.
+
+## Closed-decision -> criome mapping (t00s)
+
+`decision::CriomeVerdict::from_decision(slot, decision)` projects a
+closed `ApprovalDecision` onto the `AuthorizationRequestSlot` criome
+parked, yielding a `meta-signal-criome` `AuthorizationApprovalDecision`.
+This is the one place the two enums meet (`skills/enum-contact-points.md`);
+the daemon's `criome_bridge` currently holds a private copy of the same
+match, which collapses onto this shared mapping at integration.
+
+## NOTA-fallback rendering (xlrk)
+
+`render::RenderNota` is a blanket affordance: any object that projects
+itself to NOTA becomes a labeled `RenderedObject`. A thin client paints
+whatever purpose-built view it has and falls back to the typed object's
+NOTA projection for everything else — the same path agents use. With the
+`nota-text` feature this is the real `nota-next` projection; without it
+the model still compiles and falls back to `Debug`.
+
+## Stack discipline
+
+Closed enums; one typed `Error` enum (`thiserror`); full English words
+with no crate-name prefix; methods on data-bearing types, no free
+functions; schema-emitted contract types are the nouns and behavior
+attaches to them. Per `~/primary/skills/rust-discipline.md`.
+
+## Adoption
+
+- **mentci-egui** consumes `ObservationModel` + `RenderNota` today: it
+  holds the model, feeds typed replies in as `EngineEvent`s, and renders
+  every reply through the shared renderer. The shell owns no approval
+  logic or per-socket state of its own.
+- **mentci daemon** adopts next: its `state.rs` already builds the same
+  contract types; the shared move is to let the daemon's verdict path use
+  `decision::CriomeVerdict` instead of `criome_bridge`'s private
+  `map_decision`, and to let any introspection surface reuse
+  `RenderNota`. The daemon keeps persistence, sockets, key-unlock, and
+  lifecycle; mentci-lib owns the typed model both sides share.
+
+## Scaffold note (designer prototype)
+
+This branch consumes a matching `signal-mentci` feature branch by local
+`[patch]` because the shared model needs public READERS on projected
+interface state (`pending_questions`, `panes`, `notification`,
+`suggested_answer`, `context`) the operator's main does not yet expose.
+Those readers attach to the schema-emitted nouns in `signal-mentci`'s
+hand-written `lib.rs`. When the operator merges the readers, the patch
+collapses and the plain git dependency resolves with no other change.

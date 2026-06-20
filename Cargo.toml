@@ -2,24 +2,44 @@
 name         = "mentci-lib"
 version      = "0.1.0"
 edition      = "2024"
-rust-version = "1.85"
+rust-version = "1.88"
 license      = "MIT OR Apache-2.0"
 repository   = "https://github.com/LiGoldragon/mentci-lib"
-description  = "mentci-lib — heavy application logic for the mentci interaction surface. Holds workbench state, view snapshots, user-event handling, dual-daemon connection management, schema-aware constructor flows, and per-kind canvas renderers. Consumed by thin GUI shells (mentci-egui first; mentci-iced and mentci-flutter later). Skeleton-as-design."
+description  = "mentci-lib — the shared observability + control model for the mentci programmable-UI component. Owns the MVU-shaped ObservationModel keyed by component socket, the approval state machine over signal-mentci's vocabulary, the edits-as-proposals flow, the NOTA-fallback renderer, and the closed-decision -> criome verdict mapping. Consumed by the mentci daemon and by thin clients (mentci-egui first)."
 
 [dependencies]
-signal    = { git = "https://github.com/LiGoldragon/signal", branch = "main" }
-rkyv      = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
-thiserror = "2"
-tokio     = { version = "1", features = ["rt-multi-thread", "net", "sync", "io-util", "macros", "time"] }
+signal-mentci      = { git = "https://github.com/LiGoldragon/signal-mentci", branch = "main" }
+signal-frame       = { git = "https://github.com/LiGoldragon/signal-frame", branch = "main", default-features = false }
+meta-signal-mentci = { git = "https://github.com/LiGoldragon/meta-signal-mentci", branch = "main" }
+signal-criome      = { git = "https://github.com/LiGoldragon/signal-criome", branch = "main" }
+meta-signal-criome = { git = "https://github.com/LiGoldragon/meta-signal-criome", branch = "main" }
+nota-next          = { git = "https://github.com/LiGoldragon/nota-next.git", branch = "main", optional = true }
+thiserror          = "2"
+
+# DESIGNER PROTOTYPE SCAFFOLD (criome-E1 style). The shared observability
+# model needs public READERS on signal-mentci's projected interface state
+# (pending_questions, panes, notification, suggested_answer, context) which the
+# operator's main does not yet expose. They are added on a matching
+# signal-mentci feature branch in a sibling worktree; this patch consumes that
+# branch by local path until the operator merges the readers and the dependency
+# falls back to the plain git source. Note this scaffold at integration.
+[patch."https://github.com/LiGoldragon/signal-mentci"]
+signal-mentci = { path = "/home/li/wt/github.com/LiGoldragon/signal-mentci/re-found-on-live-contracts" }
+
+[features]
+default     = []
+# NOTA projection of typed payloads (the render-typed-replies-and-unknown-
+# objects behavior). Pulls the optional NOTA codec through every contract.
+nota-text = [
+  "dep:nota-next",
+  "signal-frame/nota-text",
+  "signal-mentci/nota-text",
+  "meta-signal-mentci/nota-text",
+  "signal-criome/nota-text",
+  "meta-signal-criome/nota-text",
+]
 
 [lints.rust]
-unused = "allow"
-dead_code = "allow"
-
-# End-to-end verification binary — exercises mentci-lib against
-# a live criome-daemon. Used by the workspace-level Nix test
-# `workspace/checks/scenario-mentci-lib-handshake.nix`.
-[[bin]]
-name = "mentci-handshake-test"
-path = "examples/handshake.rs"
+unsafe_code = "forbid"
+unused      = { level = "warn", priority = -1 }
+dead_code   = "warn"

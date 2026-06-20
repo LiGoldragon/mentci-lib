@@ -25,16 +25,23 @@ future TUI/CLI clients, editor integrations, and status surfaces.
   outer runtime dispatches). The whole surface is
   `update(state, event) → state, Vec<Cmd>` and `view(state) →
   WorkbenchView`; time-travel debugging is a property of that shape.
-- **The dual-daemon split is hidden from widget code.** mentci-lib
-  owns both daemon connections (criome for state, nexus-daemon for
-  rendering); the shell sees one unified engine surface (and the
-  split is revealed only in the header view for the introspecting
-  human).
+- **One model keyed by component socket; the multi-socket split is
+  hidden from widget code.** mentci-lib owns observations per
+  `ComponentSocketKind` (its own canonical state, the meta surface, a
+  criome peer); the shell sees one unified `ObservationModel` surface,
+  and the per-socket split is revealed only in the header view for the
+  introspecting human. *(The earlier framing of this as a fixed criome +
+  "nexus-daemon" dual-daemon pair is retired: forensic sub-report 5 found
+  the nexus daemon was never built and the daemon speaks `signal-frame`
+  `StreamingFrame`, not a graph-signal transport. The durable intent —
+  hide the connection split behind one model — holds; the mechanism is
+  now component-socket-keyed observations over the live contracts.)*
 - **The library holds typed records, never GUI-library types.**
   egui, iced, and Flutter widget types do not appear in this crate;
-  rendering primitives live in each shell. The signal protocol
-  lives in `signal` and is consumed here, not redefined; Sema state
-  is owned by criome, not here.
+  rendering primitives live in each shell. The signal vocabulary lives in
+  `signal-mentci` / `meta-signal-mentci` (and `signal-criome` /
+  `meta-signal-criome` for the verdict path) and is consumed here, not
+  redefined; canonical state is owned by the mentci daemon, not here.
 - **First-class component triad.** Mentci's runtime home is the future
   `mentci` daemon repository. `signal-mentci` carries the ordinary
   programmable-UI wire vocabulary; `meta-signal-mentci` carries startup
@@ -64,18 +71,21 @@ future TUI/CLI clients, editor integrations, and status surfaces.
 - Closed enums; typed `Error` (thiserror); full English words with
   no crate-name prefix on types. Per `primary/skills/naming.md` and
   `primary/skills/rust-discipline.md`.
-- Schema knowledge that informs constructor flows is compile-time
-  today (via `signal` types) and record-driven once a future schema
-  catalogue lands in criome's records database.
+- The wire vocabulary is consumed from the live `signal-mentci` /
+  `meta-signal-mentci` contracts (and `signal-criome` /
+  `meta-signal-criome` for the criome verdict path), never redefined.
 
 ## Scope — today, not eventually
 
 Any "sema" reference here is today's `sema` storage kernel; any
 "criome" reference is today's `criome` daemon. The eventual `Sema`
 / `Criome` are broader; this library is a realization step on
-today's stack. Currently skeleton-as-design: types are pinned,
-bodies are `todo!()`; it lands alongside `mentci-egui`'s first
-running surface. Per `primary/ESSENCE.md` §"Today and eventually".
+today's stack. Re-founded on the live contracts (forensic sub-report
+5): the MVU `ObservationModel`, the approval state machine, the
+NOTA-fallback renderer, and the closed-decision -> criome verdict
+mapping are implemented and green, with mentci-egui consuming the
+model. The daemon adopts the shared verdict mapping + renderer next.
+Per `primary/ESSENCE.md` §"Today and eventually".
 
 *Source statements live in Spirit intent records and the project's
 `ARCHITECTURE.md`. Workspace-shape intent stays in

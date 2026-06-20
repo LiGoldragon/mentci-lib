@@ -1,24 +1,27 @@
-//! Psyche approval flow.
+//! The approval state machine — KEPT from the original design, REBASED onto
+//! `signal-mentci`'s approval vocabulary.
 //!
-//! Criome escalation asks the psyche a question. mentci holds that
-//! question as typed state, presents it through a shell, and returns a
-//! typed answer for the runtime to submit back to criome.
+//! The original `mentci-lib` hand-rolled its own `ApprovalQuestion`,
+//! `ApprovalSource`, `ApprovalDecision`, `ApprovalResponse`,
+//! `AnswerProposal`, prompt/answer/explanation/context newtypes. `signal-mentci`
+//! now OWNS every one of those (it is the working wire contract). So this module
+//! keeps the *logic* — the pending queue, the selection cursor, the
+//! subscription/delivery fan-out, the closed-verdict + edits-as-proposals
+//! shapes — and consumes the contract types instead of redefining them.
+//!
+//! What the daemon owns (minting question identifiers, the canonical
+//! `InterfaceState`) is NOT duplicated here: the model reads the daemon's
+//! projected pending-question list. This state machine is the *client-side*
+//! cursor + the local subscription fan-out a control surface needs.
 
-/// Local identifier for one approval question.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ApprovalIdentifier(u64);
+use signal_mentci::{
+    AnswerProposal, ApprovalDecision, ApprovalQuestion, ApprovalVerdict, QuestionIdentifier,
+    SubscriberName,
+};
 
-impl ApprovalIdentifier {
-    pub fn new(value: u64) -> Self {
-        Self(value)
-    }
-
-    pub fn value(&self) -> u64 {
-        self.0
-    }
-}
-
-/// Local identifier for a client subscribed to approval state.
+/// Local identifier for a client subscribed to approval-state changes the
+/// model fans out (a status bar, a popup, an approval pane). Daemon
+/// subscription tokens are a different identity, minted by the daemon.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ApprovalClientIdentifier(u64);
 
@@ -32,7 +35,7 @@ impl ApprovalClientIdentifier {
     }
 }
 
-/// Local identifier for one approval-state subscription.
+/// Local identifier for one approval-state subscription the model holds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ApprovalSubscriptionIdentifier(u64);
 
@@ -46,171 +49,12 @@ impl ApprovalSubscriptionIdentifier {
     }
 }
 
-/// Where an approval question came from.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ApprovalSource {
-    /// Criome contract evaluation reached the human adjudicator rung.
-    CriomeEscalation,
-    /// A long-lived agent asked the psyche through the approval surface.
-    AgentQuestion,
-    /// A local system surface needs an explicit yes/no from the psyche.
-    LocalSystemPrompt,
-}
-
-/// The question shown to the psyche.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ApprovalPrompt(String);
-
-impl ApprovalPrompt {
-    pub fn new(value: impl Into<String>) -> Self {
-        Self(value.into())
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-/// Suggested answer supplied by the asking agent or contract.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SuggestedAnswer(String);
-
-impl SuggestedAnswer {
-    pub fn new(value: impl Into<String>) -> Self {
-        Self(value.into())
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-/// Explanation for why the suggested answer is reasonable.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ApprovalExplanation(String);
-
-impl ApprovalExplanation {
-    pub fn new(value: impl Into<String>) -> Self {
-        Self(value.into())
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-/// Context the psyche needs before deciding.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ApprovalContext(String);
-
-impl ApprovalContext {
-    pub fn new(value: impl Into<String>) -> Self {
-        Self(value.into())
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-/// A pending approval question.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ApprovalQuestion {
-    pub identifier: ApprovalIdentifier,
-    pub source: ApprovalSource,
-    pub prompt: ApprovalPrompt,
-    pub suggested_answer: SuggestedAnswer,
-    pub explanation: ApprovalExplanation,
-    pub context: ApprovalContext,
-}
-
-impl ApprovalQuestion {
-    pub fn new(
-        identifier: ApprovalIdentifier,
-        source: ApprovalSource,
-        prompt: ApprovalPrompt,
-        suggested_answer: SuggestedAnswer,
-        explanation: ApprovalExplanation,
-        context: ApprovalContext,
-    ) -> Self {
-        Self {
-            identifier,
-            source,
-            prompt,
-            suggested_answer,
-            explanation,
-            context,
-        }
-    }
-}
-
-/// Body of a psyche-authored answer proposal.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AnswerBody(String);
-
-impl AnswerBody {
-    pub fn new(value: impl Into<String>) -> Self {
-        Self(value.into())
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-/// A different answer authored as a separate object.
-///
-/// This is not a verdict variant. The runtime submits it through the normal
-/// authorization path, then the psyche can approve that object's digest with
-/// the same closed verdict set.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AnswerProposal {
-    pub question: ApprovalIdentifier,
-    pub body: AnswerBody,
-}
-
-impl AnswerProposal {
-    pub fn new(question: ApprovalIdentifier, body: AnswerBody) -> Self {
-        Self { question, body }
-    }
-}
-
-/// Decision returned by the psyche.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ApprovalDecision {
-    /// Accept the suggested answer exactly as proposed.
-    ApproveSuggestedAnswer,
-    /// Reject the proposal.
-    Reject,
-    /// Leave this question pending for later.
-    Defer,
-}
-
-/// Response ready for submission back to criome.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ApprovalResponse {
-    pub identifier: ApprovalIdentifier,
-    pub decision: ApprovalDecision,
-}
-
-impl ApprovalResponse {
-    pub fn new(identifier: ApprovalIdentifier, decision: ApprovalDecision) -> Self {
-        Self {
-            identifier,
-            decision,
-        }
-    }
-}
-
-/// Which approval-state updates a client wants.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Which approval-state updates a local client wants.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ApprovalInterest {
-    /// Every approval state update.
     All,
-    /// New pending questions and selection changes.
     PendingQuestions,
-    /// Completed approval responses.
-    AnsweredResponses,
+    AnsweredVerdicts,
 }
 
 impl ApprovalInterest {
@@ -223,20 +67,19 @@ impl ApprovalInterest {
                     | ApprovalUpdate::QuestionReceived(_)
                     | ApprovalUpdate::QuestionSelected(_)
             ),
-            Self::AnsweredResponses => matches!(
-                update,
-                ApprovalUpdate::Snapshot(_) | ApprovalUpdate::QuestionAnswered(_)
-            ),
+            Self::AnsweredVerdicts => {
+                matches!(update, ApprovalUpdate::Snapshot(_) | ApprovalUpdate::QuestionAnswered(_))
+            }
         }
     }
 }
 
-/// One client subscription over the daemon-owned approval state.
+/// One local client subscription over the approval state.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ApprovalSubscription {
-    pub identifier: ApprovalSubscriptionIdentifier,
-    pub client: ApprovalClientIdentifier,
-    pub interest: ApprovalInterest,
+    identifier: ApprovalSubscriptionIdentifier,
+    client: ApprovalClientIdentifier,
+    interest: ApprovalInterest,
 }
 
 impl ApprovalSubscription {
@@ -252,54 +95,38 @@ impl ApprovalSubscription {
         }
     }
 
+    pub fn identifier(&self) -> ApprovalSubscriptionIdentifier {
+        self.identifier
+    }
+
+    pub fn client(&self) -> ApprovalClientIdentifier {
+        self.client
+    }
+
     fn delivery_for(&self, update: &ApprovalUpdate) -> Option<ApprovalDelivery> {
         if self.interest.accepts(update) {
-            Some(ApprovalDelivery::new(
-                self.identifier,
-                self.client,
-                update.clone(),
-            ))
+            Some(ApprovalDelivery::new(self.identifier, self.client, update.clone()))
         } else {
             None
         }
     }
 }
 
-/// Receipt returned when a client subscribes.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ApprovalSubscriptionReceipt {
-    pub subscription: ApprovalSubscription,
-    pub snapshot: ApprovalView,
-}
-
-impl ApprovalSubscriptionReceipt {
-    pub fn new(subscription: ApprovalSubscription, snapshot: ApprovalView) -> Self {
-        Self {
-            subscription,
-            snapshot,
-        }
-    }
-}
-
-/// One approval-state update.
+/// One approval-state update the model fans out to local subscribers.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ApprovalUpdate {
-    /// Initial state sent to a subscriber.
     Snapshot(ApprovalView),
-    /// A new question became pending.
     QuestionReceived(ApprovalQuestion),
-    /// The active question changed.
-    QuestionSelected(ApprovalIdentifier),
-    /// A question was answered and removed from the pending queue.
-    QuestionAnswered(ApprovalResponse),
+    QuestionSelected(QuestionIdentifier),
+    QuestionAnswered(ApprovalVerdict),
 }
 
-/// One update routed to one subscribed client.
+/// One update routed to one local subscriber.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ApprovalDelivery {
-    pub subscription: ApprovalSubscriptionIdentifier,
-    pub client: ApprovalClientIdentifier,
-    pub update: ApprovalUpdate,
+    subscription: ApprovalSubscriptionIdentifier,
+    client: ApprovalClientIdentifier,
+    update: ApprovalUpdate,
 }
 
 impl ApprovalDelivery {
@@ -314,100 +141,184 @@ impl ApprovalDelivery {
             update,
         }
     }
-}
 
-/// Result of recording a closed response to a pending question.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ApprovalResponseOutcome {
-    pub question: Option<ApprovalQuestion>,
-    pub deliveries: Vec<ApprovalDelivery>,
-}
+    pub fn subscription(&self) -> ApprovalSubscriptionIdentifier {
+        self.subscription
+    }
 
-impl ApprovalResponseOutcome {
-    pub fn new(question: Option<ApprovalQuestion>, deliveries: Vec<ApprovalDelivery>) -> Self {
-        Self {
-            question,
-            deliveries,
-        }
+    pub fn client(&self) -> ApprovalClientIdentifier {
+        self.client
+    }
+
+    pub fn update(&self) -> &ApprovalUpdate {
+        &self.update
     }
 }
 
-/// Approval state owned by the workbench model.
+/// Receipt returned when a local client subscribes: the subscription plus the
+/// snapshot it opens with.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ApprovalSubscriptionReceipt {
+    subscription: ApprovalSubscription,
+    snapshot: ApprovalView,
+}
+
+impl ApprovalSubscriptionReceipt {
+    pub fn subscription(&self) -> &ApprovalSubscription {
+        &self.subscription
+    }
+
+    pub fn snapshot(&self) -> &ApprovalView {
+        &self.snapshot
+    }
+}
+
+/// The result of answering: the question removed from the queue (if any) plus
+/// the deliveries the verdict generated.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ApprovalAnswerOutcome {
+    answered: Option<ApprovalQuestion>,
+    verdict: Option<ApprovalVerdict>,
+    deliveries: Vec<ApprovalDelivery>,
+}
+
+impl ApprovalAnswerOutcome {
+    pub fn answered(&self) -> Option<&ApprovalQuestion> {
+        self.answered.as_ref()
+    }
+
+    pub fn verdict(&self) -> Option<&ApprovalVerdict> {
+        self.verdict.as_ref()
+    }
+
+    pub fn deliveries(&self) -> &[ApprovalDelivery] {
+        &self.deliveries
+    }
+}
+
+/// The client-side approval state: the pending-question queue (mirrored from
+/// the daemon's projected state), the selection cursor, the answered-verdict
+/// log, and local subscriptions. This is the rebased version of the original
+/// `ApprovalState`.
 #[derive(Debug, Default, Clone)]
-pub struct ApprovalState {
+pub struct ApprovalModel {
     pending: Vec<ApprovalQuestion>,
-    selected: Option<ApprovalIdentifier>,
-    answered: Vec<ApprovalResponse>,
+    selected: Option<QuestionIdentifier>,
+    answered: Vec<ApprovalVerdict>,
     subscriptions: Vec<ApprovalSubscription>,
     next_subscription: u64,
 }
 
-impl ApprovalState {
+impl ApprovalModel {
+    /// Replace the pending queue with the daemon's projected list, preserving
+    /// the selection if it survives and fanning out a snapshot. This is how a
+    /// fresh `PendingQuestionsProjection` or `FullProjection` folds in.
+    pub fn absorb_pending(&mut self, pending: Vec<ApprovalQuestion>) -> Vec<ApprovalDelivery> {
+        self.pending = pending;
+        let selection_survives = self
+            .selected
+            .as_ref()
+            .is_some_and(|identifier| self.is_pending(identifier));
+        if !selection_survives {
+            self.selected = self.pending.first().map(|question| question.identifier.clone());
+        }
+        self.deliveries_for(ApprovalUpdate::Snapshot(self.view()))
+    }
+
+    /// Register a newly-arrived question locally (used when a single question
+    /// push arrives rather than a whole projection).
     pub fn receive(&mut self, question: ApprovalQuestion) -> Vec<ApprovalDelivery> {
-        let identifier = question.identifier;
-        let delivered = question.clone();
+        let identifier = question.identifier.clone();
+        let received = question.clone();
         self.pending.push(question);
         if self.selected.is_none() {
             self.selected = Some(identifier);
         }
-        self.deliveries_for(ApprovalUpdate::QuestionReceived(delivered))
+        self.deliveries_for(ApprovalUpdate::QuestionReceived(received))
     }
 
-    pub fn select(&mut self, identifier: ApprovalIdentifier) -> bool {
-        if self
-            .pending
-            .iter()
-            .any(|question| question.identifier == identifier)
-        {
-            self.selected = Some(identifier);
-            true
-        } else {
-            false
-        }
-    }
-
-    pub fn select_with_deliveries(
-        &mut self,
-        identifier: ApprovalIdentifier,
-    ) -> Vec<ApprovalDelivery> {
-        if self.select(identifier) {
+    /// Move the selection cursor to a pending question.
+    pub fn select(&mut self, identifier: QuestionIdentifier) -> Vec<ApprovalDelivery> {
+        if self.is_pending(&identifier) {
+            self.selected = Some(identifier.clone());
             self.deliveries_for(ApprovalUpdate::QuestionSelected(identifier))
         } else {
             Vec::new()
         }
     }
 
-    pub fn answer(&mut self, response: ApprovalResponse) -> Option<ApprovalQuestion> {
-        self.answer_with_deliveries(response).question
-    }
-
-    pub fn answer_with_deliveries(
-        &mut self,
-        response: ApprovalResponse,
-    ) -> ApprovalResponseOutcome {
-        if response.decision == ApprovalDecision::Defer {
-            self.select(response.identifier);
-            return ApprovalResponseOutcome::new(None, Vec::new());
+    /// Record a closed verdict against a pending question. `Defer` leaves the
+    /// question pending and only moves the cursor; a binding verdict removes
+    /// the question and logs the verdict, advancing the cursor.
+    pub fn answer(&mut self, verdict: ApprovalVerdict) -> ApprovalAnswerOutcome {
+        if matches!(verdict.decision, ApprovalDecision::Defer) {
+            let _ = self.select(verdict.question.clone());
+            return ApprovalAnswerOutcome {
+                answered: None,
+                verdict: Some(verdict),
+                deliveries: Vec::new(),
+            };
         }
-
         let Some(index) = self
             .pending
             .iter()
-            .position(|question| question.identifier == response.identifier)
+            .position(|question| question.identifier == verdict.question)
         else {
-            return ApprovalResponseOutcome::new(None, Vec::new());
+            return ApprovalAnswerOutcome {
+                answered: None,
+                verdict: None,
+                deliveries: Vec::new(),
+            };
         };
-        let question = self.pending.remove(index);
-        self.answered.push(response.clone());
+        let answered = self.pending.remove(index);
+        self.answered.push(verdict.clone());
         self.selected = self
             .pending
             .get(index)
             .or_else(|| self.pending.last())
-            .map(|next| next.identifier);
-        let deliveries = self.deliveries_for(ApprovalUpdate::QuestionAnswered(response));
-        ApprovalResponseOutcome::new(Some(question), deliveries)
+            .map(|next| next.identifier.clone());
+        let deliveries = self.deliveries_for(ApprovalUpdate::QuestionAnswered(verdict.clone()));
+        ApprovalAnswerOutcome {
+            answered: Some(answered),
+            verdict: Some(verdict),
+            deliveries,
+        }
     }
 
+    /// Build a closed verdict for the currently-selected question (the common
+    /// "approve/reject/defer the focused question" gesture). Returns `None`
+    /// when nothing is selected.
+    pub fn verdict_for_selected(
+        &self,
+        decision: ApprovalDecision,
+        answered_by: SubscriberName,
+    ) -> Option<ApprovalVerdict> {
+        let question = self.selected.clone()?;
+        Some(ApprovalVerdict {
+            question,
+            decision,
+            answered_by,
+        })
+    }
+
+    /// Build an edited-answer proposal against the selected question
+    /// (edits-as-proposals: the body re-enters the normal authorization path
+    /// as a new object, NOT a verdict variant).
+    pub fn proposal_for_selected(
+        &self,
+        body: signal_mentci::AnswerText,
+        authored_by: SubscriberName,
+    ) -> Option<AnswerProposal> {
+        let question = self.selected.clone()?;
+        Some(AnswerProposal {
+            question,
+            body,
+            authored_by,
+        })
+    }
+
+    /// Subscribe a local client; returns the receipt carrying the opening
+    /// snapshot.
     pub fn subscribe(
         &mut self,
         client: ApprovalClientIdentifier,
@@ -417,9 +328,13 @@ impl ApprovalState {
         self.next_subscription += 1;
         let subscription = ApprovalSubscription::new(identifier, client, interest);
         self.subscriptions.push(subscription.clone());
-        ApprovalSubscriptionReceipt::new(subscription, self.view())
+        ApprovalSubscriptionReceipt {
+            subscription,
+            snapshot: self.view(),
+        }
     }
 
+    /// Remove a local subscription. Returns whether it existed.
     pub fn unsubscribe(&mut self, identifier: ApprovalSubscriptionIdentifier) -> bool {
         let Some(index) = self
             .subscriptions
@@ -433,18 +348,18 @@ impl ApprovalState {
     }
 
     pub fn current(&self) -> Option<&ApprovalQuestion> {
-        let selected = self.selected?;
+        let selected = self.selected.as_ref()?;
         self.pending
             .iter()
-            .find(|question| question.identifier == selected)
+            .find(|question| &question.identifier == selected)
     }
 
-    pub fn pending_count(&self) -> usize {
-        self.pending.len()
+    pub fn pending(&self) -> &[ApprovalQuestion] {
+        &self.pending
     }
 
-    pub fn answered_count(&self) -> usize {
-        self.answered.len()
+    pub fn answered(&self) -> &[ApprovalVerdict] {
+        &self.answered
     }
 
     pub fn subscription_count(&self) -> usize {
@@ -454,10 +369,16 @@ impl ApprovalState {
     pub fn view(&self) -> ApprovalView {
         ApprovalView {
             current: self.current().cloned(),
-            pending_count: self.pending_count(),
-            answered_count: self.answered_count(),
-            subscription_count: self.subscription_count(),
+            pending_count: self.pending.len(),
+            answered_count: self.answered.len(),
+            subscription_count: self.subscriptions.len(),
         }
+    }
+
+    fn is_pending(&self, identifier: &QuestionIdentifier) -> bool {
+        self.pending
+            .iter()
+            .any(|question| &question.identifier == identifier)
     }
 
     fn deliveries_for(&self, update: ApprovalUpdate) -> Vec<ApprovalDelivery> {
@@ -468,7 +389,7 @@ impl ApprovalState {
     }
 }
 
-/// Pure-data approval snapshot for shells to paint.
+/// Pure-data approval snapshot a shell paints.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ApprovalView {
     pub current: Option<ApprovalQuestion>,

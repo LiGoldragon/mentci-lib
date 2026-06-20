@@ -1,18 +1,17 @@
 # mentci-lib
 
-Heavy application logic for the mentci interaction surface.
+The shared observability + control model for the mentci component.
 
-mentci is the human-facing surface for working with criome's
-sema. The first incarnation is an introspection workbench
-(`mentci-egui`); later family members (`mentci-iced`,
-`mentci-flutter`, …) use other GUI libraries. **All of them
-share this library**, which carries every piece of
-application logic — workbench state, view derivation,
-gesture-to-signal action flows, dual-daemon connection
-management, schema-aware constructor flows, per-kind canvas
-renderers, theme and layout interpretation. Each GUI shell
-is thin: it renders the data this library produces and
-forwards events back.
+mentci is the human-facing surface for criome's approval flow and the
+daemon's programmable UI state. The first client is `mentci-egui`; later
+family members (`mentci-iced`, `mentci-flutter`, a TUI, a status bar, …)
+use other GUI libraries. **All of them — and the daemon itself — share
+this model**, so canonical daemon state and painted client state cannot
+drift. It carries the MVU `ObservationModel` keyed by component socket,
+the approval state machine over `signal-mentci`'s vocabulary, the
+edits-as-proposals flow, the NOTA-fallback renderer, and the
+closed-decision -> criome verdict mapping. Each shell is thin: it renders
+the data this model produces and forwards events back.
 
 The contract is **data out, events in** — the shape that
 ports cleanly across egui (immediate-mode), iced (literal

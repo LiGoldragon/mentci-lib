@@ -1,94 +1,42 @@
-//! [`Cmd`] — side-effect descriptions returned from
-//! `update`. The outer runtime executes these.
+//! [`Cmd`] — the side-effects the outer runtime dispatches after an event is
+//! folded into the model. Keeping side-effects out of the model is the MVU
+//! property: `update` is a pure function of `(state, event) -> (state,
+//! Vec<Cmd>)`.
 //!
-//! Cmds are *intent*; the runtime is the executor. Keeping
-//! side-effects out of the model preserves the MVU
-//! property — `update` is a pure function of `(state, event)`.
+//! Every command carries a live `signal-mentci` request (`MentciRequest`)
+//! addressed to a component socket; the runtime owns the transport that turns
+//! it into a `signal-frame` `MentciFrame`. The model never speaks the wire
+//! itself.
 
-use crate::approval::{
-    AnswerProposal, ApprovalDelivery, ApprovalQuestion, ApprovalResponse,
-    ApprovalSubscriptionReceipt,
-};
-use signal::Frame;
+use meta_signal_mentci::ComponentSocketKind;
+use signal_mentci::MentciRequest;
 
-/// One side-effect to dispatch.
-#[derive(Debug, Clone)]
+/// One side-effect to dispatch. The runtime executes these; the model only
+/// describes them.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Cmd {
-    /// Send a signal frame to criome.
-    SendCriome { frame: Frame },
-    /// Send a signal frame to nexus-daemon. Used for
-    /// rendering requests (signal-payload → nexus-text) and
-    /// the very rare parse-text-from-input case.
-    SendNexus { frame: Frame },
-
-    /// Open the criome connection.
-    ConnectCriome,
-    /// Open the nexus-daemon connection.
-    ConnectNexus,
-    /// Close + drop the criome connection.
-    DisconnectCriome,
-    /// Close + drop the nexus-daemon connection.
-    DisconnectNexus,
-
-    /// Notify a user-facing client that a new approval question
-    /// needs psyche attention.
-    NotifyApproval { question: ApprovalQuestion },
-
-    /// Broadcast daemon-owned approval-state updates to subscribed clients.
-    PublishApprovalUpdates { deliveries: Vec<ApprovalDelivery> },
-
-    /// Confirm that a client is now subscribed to approval-state updates.
-    ConfirmApprovalSubscription {
-        receipt: ApprovalSubscriptionReceipt,
+    /// Send a `signal-mentci` request to a component socket. The runtime
+    /// frames it (`MentciFrame::new(MentciFrameBody::Request { .. })`), dials
+    /// the socket from the configured [`ComponentSocketKind`] path, and raises
+    /// the reply as a [`crate::event::EngineEvent`].
+    SendRequest {
+        socket: ComponentSocketKind,
+        request: MentciRequest,
     },
 
-    /// Confirm that a client subscription was removed.
-    ConfirmApprovalUnsubscription {
-        subscription: crate::approval::ApprovalSubscriptionIdentifier,
-    },
-
-    /// Submit the psyche's closed verdict back to criome.
-    SubmitApproval { response: ApprovalResponse },
-
-    /// Submit an edited answer as a new object for criome authorization.
-    SubmitAnswerProposal { proposal: AnswerProposal },
-
-    /// Ask nexus-daemon to render a typed payload as nexus
-    /// text. Reply arrives as
-    /// [`crate::event::EngineEvent::NexusRendered`].
-    RenderViaNexus {
-        ticket: u64,
-        payload: NexusRenderRequest,
-    },
-
-    /// Schedule a timer that fires once after `ms` milliseconds.
-    /// Used sparingly — the workbench is push-driven, not
-    /// poll-driven.
-    SetTimer { ms: u64, tag: TimerTag },
-}
-
-/// What kind of payload to render via nexus-daemon.
-/// Concrete shape lands when the nexus-daemon's render-only
-/// API is wired.
-#[derive(Debug, Clone)]
-pub enum NexusRenderRequest {
-    /// Render a complete record.
-    Record {
-        kind: String,
-        content_hash: signal::Hash,
-    },
-    /// Render a typed verb body.
-    Verb {
-        verb_name: String,
-        // typed payload bytes; rkyv-encoded
-        bytes: Vec<u8>,
+    /// Forward a closed verdict to criome's meta socket. Carries the typed
+    /// criome verdict and the request slot it answers — the model already did
+    /// the closed-decision -> criome mapping
+    /// (`crate::decision::CriomeVerdict`); the runtime only delivers it over
+    /// the `meta-signal-criome` `SubmitAuthorizationApproval` path.
+    SubmitCriomeVerdict {
+        verdict: crate::decision::CriomeVerdict,
     },
 }
 
-/// Tag identifying which timer fired. Each scheduled timer
-/// matches against this on its callback.
-#[derive(Debug, Clone)]
-pub enum TimerTag {
-    Reconnect,
-    Custom { name: String },
+impl Cmd {
+    /// Build a [`Cmd::SendRequest`] addressed to a component socket.
+    pub fn send(socket: ComponentSocketKind, request: MentciRequest) -> Self {
+        Self::SendRequest { socket, request }
+    }
 }

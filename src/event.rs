@@ -1,285 +1,106 @@
-//! [`UserEvent`] and [`EngineEvent`] — the two event types the
-//! workbench accepts.
+//! [`UserEvent`] and [`EngineEvent`] — the two event kinds the shared model
+//! accepts.
 //!
-//! Closed enums; one variant per kind of event. Adding a new
-//! gesture or engine push grows the appropriate enum.
+//! Closed enums; one variant per gesture or daemon push. The model is
+//! MVU-shaped: a shell forwards [`UserEvent`]s, the runtime raises
+//! [`EngineEvent`]s, and both flow through
+//! [`crate::observation::ObservationModel`] which returns [`crate::cmd::Cmd`]s.
+//!
+//! Every payload type here is a live `signal-mentci` /
+//! `meta-signal-mentci` contract type — the model never mints a parallel
+//! mirror vocabulary.
 
-use crate::approval::{
-    AnswerProposal, ApprovalClientIdentifier, ApprovalInterest, ApprovalQuestion, ApprovalResponse,
-    ApprovalSubscriptionIdentifier,
+use meta_signal_mentci::ComponentSocketKind;
+use signal_mentci::{
+    AnswerProposal, ApprovalVerdict, InterfaceInterest, ProjectedInterfaceState, QuestionProposal,
+    SubscriptionToken,
 };
-use signal::{AnyKind, Frame, Graph, Node, Slot};
 
-/// What the shell forwards when the user does something.
-#[derive(Debug, Clone)]
+/// What a shell forwards when the psyche does something. Each variant maps to
+/// a `signal-mentci` request the model turns into a [`crate::cmd::Cmd`].
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UserEvent {
-    // ── selection ──────────────────────────────────────────
-    /// Pick a Graph in the GraphsNav.
-    SelectGraph {
-        slot: Slot<Graph>,
+    /// Open a projected-state observation on a component socket with a chosen
+    /// interest. The daemon mints the token; the model records it on the open
+    /// reply.
+    Observe {
+        socket: ComponentSocketKind,
+        interest: InterfaceInterest,
     },
-    /// Pick any slot — Node, Edge, or another record kind.
-    SelectSlot {
-        slot: Slot<AnyKind>,
+    /// Close a previously-opened observation by its daemon-minted token.
+    RetractObservation {
+        socket: ComponentSocketKind,
+        token: SubscriptionToken,
     },
-    /// Pin a slot to keep it visible across selections.
-    PinSlot {
-        slot: Slot<AnyKind>,
+    /// Select which pending question the approval surface is focused on.
+    SelectQuestion {
+        question: signal_mentci::QuestionIdentifier,
     },
-    /// Unpin a previously pinned slot.
-    UnpinSlot {
-        slot: Slot<AnyKind>,
-    },
-
-    // ── canvas: flow-graph gestures ────────────────────────
-    /// Open the new-node constructor flow. Triggered by an
-    /// explicit "+ node" affordance for now; drag-to-create
-    /// lands as a richer gesture in a later iteration.
-    OpenNewNodeFlow,
-    /// Begin dragging a new box onto the canvas. Position +
-    /// kind picked from the palette.
-    BeginDragNewBox {
-        graph: Slot<Graph>,
-        kind: NodeKindHint,
-        at: CanvasPos,
-    },
-    /// Mouse moves while dragging.
-    UpdateDragNewBox {
-        at: CanvasPos,
-    },
-    /// Drop the new box. Triggers the constructor flow modal.
-    DropDragNewBox {
-        at: CanvasPos,
-    },
-
-    /// Begin dragging a wire from a node.
-    BeginDragWire {
-        from: Slot<Node>,
-        at: CanvasPos,
-    },
-    /// Mouse moves while dragging the wire end.
-    UpdateDragWire {
-        at: CanvasPos,
-    },
-    /// Drop the wire on a target. Triggers the edge constructor flow.
-    DropDragWire {
-        onto: Slot<Node>,
-    },
-
-    // ── canvas: any-kind gestures ──────────────────────────
-    /// Move a node on the canvas. Generates a Mutate to its
-    /// position record on commit.
-    MoveNode {
-        slot: Slot<Node>,
-        to: CanvasPos,
-    },
-    /// Pan the canvas viewport.
-    PanCanvas {
-        delta: CanvasDelta,
-    },
-    /// Zoom the canvas viewport.
-    ZoomCanvas {
-        factor: f32,
-        anchor: CanvasPos,
-    },
-    /// Scrub time on a kind whose canvas is time-anchored
-    /// (astrological chart, timeline, calendar, …).
-    ScrubTime {
-        delta: TimeDelta,
-    },
-
-    // ── constructor flow ───────────────────────────────────
-    /// Update a field in the current constructor flow modal.
-    ConstructorFieldChanged {
-        field: ConstructorField,
-    },
-    /// Commit the current constructor flow.
-    ConstructorCommit,
-    /// Cancel the current constructor flow.
-    ConstructorCancel,
-
-    // ── inspector / rename ─────────────────────────────────
-    /// Begin editing a record's display name in place. Rename
-    /// works on any kind, so the slot is type-erased here.
-    BeginRename {
-        slot: Slot<AnyKind>,
-    },
-    /// Commit a renamed value.
-    CommitRename {
-        slot: Slot<AnyKind>,
-        new_name: String,
-        expected_rev: signal::Revision,
-    },
-    /// Cancel a rename in progress.
-    CancelRename,
-
-    /// Retract a record (Node, Edge, …). Surfaces a confirm
-    /// flow before the verb is sent.
-    RequestRetract {
-        slot: Slot<AnyKind>,
-    },
-
-    // ── pane toggles ───────────────────────────────────────
-    ToggleWirePane,
-    ToggleTweaksPane,
-    PauseWire,
-    ResumeWire,
-
-    // ── diagnostics ────────────────────────────────────────
-    ClearDiagnostics,
-    JumpToDiagnosticTarget {
-        diagnostic_id: u64,
-    },
-
-    // ── wire pane ──────────────────────────────────────────
-    SetWireFilter {
-        filter: WireFilter,
-    },
-
-    // ── connection management ──────────────────────────────
-    /// User asked to reconnect a dropped daemon.
-    ReconnectCriome,
-    ReconnectNexus,
-
-    // ── psyche approval ────────────────────────────────────
-    /// Select a pending approval question.
-    SelectApproval {
-        identifier: crate::approval::ApprovalIdentifier,
-    },
-    /// Subscribe one client to daemon-owned approval-state changes.
-    SubscribeApproval {
-        client: ApprovalClientIdentifier,
-        interest: ApprovalInterest,
-    },
-    /// Remove one approval-state subscription.
-    UnsubscribeApproval {
-        subscription: ApprovalSubscriptionIdentifier,
-    },
-    /// Answer a pending approval question.
-    AnswerApproval {
-        response: ApprovalResponse,
-    },
-    /// Submit a different answer as a new typed proposal object.
-    ProposeApprovalAnswer {
-        proposal: AnswerProposal,
+    /// Submit a closed verdict on a pending question.
+    AnswerQuestion { verdict: ApprovalVerdict },
+    /// Author a different answer as a new typed proposal object on the normal
+    /// authorization path (edits-as-proposals).
+    ProposeEditedAnswer { proposal: AnswerProposal },
+    /// Push a programmable interface mutation into the daemon's canonical
+    /// state.
+    PushQuestion {
+        socket: ComponentSocketKind,
+        proposal: QuestionProposal,
     },
 }
 
-/// What the runtime raises when something arrives from
-/// outside (daemon push, reply, connection event, timer).
-#[derive(Debug, Clone)]
+/// What the runtime raises when something arrives from a daemon connection.
+/// Replies and pushes are carried as the live `signal-mentci` reply / event
+/// shapes; the model folds them into per-socket projected state.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EngineEvent {
-    // ── connection lifecycle ───────────────────────────────
-    CriomeConnected {
-        protocol_version: String,
+    /// A daemon accepted an observation and returned its minted token plus the
+    /// opening projected snapshot.
+    ObservationOpened {
+        socket: ComponentSocketKind,
+        opened: signal_mentci::InterfaceObservationOpened,
     },
-    CriomeDisconnected {
-        reason: String,
+    /// A subscription stream pushed a fresh projected state for a token the
+    /// model holds.
+    InterfaceStateChanged {
+        socket: ComponentSocketKind,
+        token: SubscriptionToken,
+        state: ProjectedInterfaceState,
     },
-    NexusConnected {
-        protocol_version: String,
+    /// The daemon admitted a presented question and minted its identifier.
+    QuestionPresented {
+        socket: ComponentSocketKind,
+        presented: signal_mentci::QuestionPresented,
     },
-    NexusDisconnected {
-        reason: String,
+    /// The daemon accepted a verdict.
+    VerdictAccepted {
+        socket: ComponentSocketKind,
+        accepted: signal_mentci::VerdictAccepted,
     },
-
-    // ── criome traffic ─────────────────────────────────────
-    /// A subscription delivered records.
-    SubscriptionPush {
-        sub_id: u64,
-        records: signal::Records,
+    /// The daemon admitted an edited-answer proposal as a new object and
+    /// returned the digest criome will later approve.
+    AnswerProposalAdmitted {
+        socket: ComponentSocketKind,
+        admitted: signal_mentci::AnswerProposalAdmitted,
     },
-    /// An outcome arrived for a previously sent edit.
-    OutcomeArrived {
-        req_id: u64,
-        outcome: signal::OutcomeMessage,
+    /// A daemon connection rejected a request.
+    Rejected {
+        socket: ComponentSocketKind,
+        rejection: signal_mentci::Rejection,
     },
-    /// A typed query reply arrived.
-    QueryReplied {
-        req_id: u64,
-        records: signal::Records,
-    },
-    /// A diagnostic carried in any reply.
-    DiagnosticEmitted {
-        diagnostic: signal::Diagnostic,
-    },
-    /// Frame seen on the wire (every direction).
-    FrameSeen {
-        direction: FrameDirection,
-        frame: Frame,
-    },
-    /// Criome or an agent asked the psyche for an approval.
-    ApprovalQuestionArrived {
-        question: ApprovalQuestion,
-    },
-
-    // ── nexus-daemon traffic ───────────────────────────────
-    /// A nexus rendering arrived for a previously dispatched
-    /// render request.
-    NexusRendered {
-        ticket: u64,
-        text: String,
-    },
-    /// A nexus parse arrived (used for completeness; humans
-    /// don't author nexus, but the path stays exercised).
-    NexusParsed {
-        ticket: u64,
-        frame: Frame,
+    /// A component socket connection changed liveness.
+    ConnectionChanged {
+        socket: ComponentSocketKind,
+        liveness: SocketLiveness,
     },
 }
 
-/// Direction a frame moved on the wire.
-#[derive(Debug, Clone, Copy)]
-pub enum FrameDirection {
-    Out,
-    In,
-    SubscriptionPush,
-}
-
-/// Which canvas position type we use. Concrete shape lands as
-/// the canvas wires up.
-#[derive(Debug, Clone, Copy)]
-pub struct CanvasPos {
-    pub x: f32,
-    pub y: f32,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct CanvasDelta {
-    pub dx: f32,
-    pub dy: f32,
-}
-
-/// Time delta for scrub gestures on time-anchored canvas
-/// kinds. Concrete shape — duration, signed direction —
-/// lands as the first time-anchored kind is wired.
-#[derive(Debug, Clone, Copy)]
-pub struct TimeDelta {
-    pub seconds: f64,
-}
-
-/// Hint of which node-kind the user is creating. Concrete
-/// values come from the schema knowledge in [`crate::schema`].
-#[derive(Debug, Clone)]
-pub struct NodeKindHint {
-    pub name: String,
-}
-
-/// A field-change event during a constructor flow. The
-/// `field_name` namespaces it per pane; the active flow knows
-/// which fields it owns.
-#[derive(Debug, Clone)]
-pub enum ConstructorField {
-    /// Free-text input.
-    Text { field_name: String, value: String },
-    /// Selection from a closed-enum variant list.
-    EnumChoice { field_name: String, variant: String },
-}
-
-/// Wire-pane filter expression. Concrete shape lands when
-/// filter UI is built.
-#[derive(Debug, Clone, Default)]
-pub struct WireFilter {
-    pub direction: Option<FrameDirection>,
-    pub verb_name: Option<String>,
+/// Liveness of one component-socket connection, surfaced in the header view.
+/// A typed enum, not a `bool` flag pair.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SocketLiveness {
+    Disconnected,
+    Connecting,
+    Connected,
+    Failed { reason: String },
 }
