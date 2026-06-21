@@ -11,7 +11,9 @@ use signal_mentci::{
 };
 
 use mentci_lib::approval::{ApprovalClientIdentifier, ApprovalInterest};
-use mentci_lib::{Cmd, CriomeVerdict, EngineEvent, ObservationModel, SocketLiveness, UserEvent};
+use mentci_lib::{
+    Cmd, CriomeAccess, CriomeVerdict, EngineEvent, ObservationModel, SocketLiveness, UserEvent,
+};
 
 fn question(identifier: &str) -> ApprovalQuestion {
     question_with_source(identifier, ApprovalSource::AgentQuestion)
@@ -40,6 +42,13 @@ fn question_with_source(identifier: &str, source: ApprovalSource) -> ApprovalQue
 }
 
 fn projected_with(questions: Vec<ApprovalQuestion>) -> ProjectedInterfaceState {
+    projected_with_access(questions, CriomeAccess::ReadWrite)
+}
+
+fn projected_with_access(
+    questions: Vec<ApprovalQuestion>,
+    criome_access: CriomeAccess,
+) -> ProjectedInterfaceState {
     ProjectedInterfaceState {
         revision: RevisionCounter::new(7),
         projection: InterfaceProjection::FullProjection(InterfaceState::new(
@@ -48,6 +57,7 @@ fn projected_with(questions: Vec<ApprovalQuestion>) -> ProjectedInterfaceState {
             None,
             Vec::new(),
             questions,
+            criome_access,
         )),
     }
 }
@@ -265,4 +275,29 @@ fn view_carries_one_row_per_observed_socket() {
     });
     let view = model.view();
     assert_eq!(view.sockets.len(), 2);
+}
+
+#[test]
+fn folded_full_projection_surfaces_criome_access_in_the_view() {
+    let mut model = ObservationModel::new(SubscriberName::new("test-client"));
+    let _ = model.on_user_event(UserEvent::Observe {
+        socket: ComponentSocketKind::Mentci,
+        interest: InterfaceInterest::FullInterfaceState,
+    });
+
+    model.on_engine_event(EngineEvent::ObservationOpened {
+        socket: ComponentSocketKind::Mentci,
+        opened: InterfaceObservationOpened {
+            token: SubscriptionToken::new("subscription-1"),
+            state: projected_with_access(vec![question("question-1")], CriomeAccess::ReadWrite),
+        },
+    });
+    assert_eq!(model.view().criome_access, Some(CriomeAccess::ReadWrite));
+
+    model.on_engine_event(EngineEvent::InterfaceStateChanged {
+        socket: ComponentSocketKind::Mentci,
+        token: SubscriptionToken::new("subscription-1"),
+        state: projected_with_access(vec![question("question-1")], CriomeAccess::ReadOnly),
+    });
+    assert_eq!(model.view().criome_access, Some(CriomeAccess::ReadOnly));
 }

@@ -61,10 +61,11 @@ Side-effects never run inside the model; a `Cmd` describes a
 `signal-mentci` request addressed to a `ComponentSocketKind`, and the
 outer runtime owns the `signal-frame` transport that turns it into a
 `MentciFrame`. Clients answer approval questions by sending
-`AnswerQuestion` to the mentci daemon. The daemon owns the criome bridge
-and routes criome-sourced answers by parked slot when it has write
-authority. Keeping side-effects out is the MVU property: `update` is a
-pure function of `(state, event)`.
+`AnswerQuestion` to the mentci daemon. The daemon owns the criome bridge,
+routes criome-sourced answers by parked slot when it has write authority,
+and mirrors that authority as `CriomeAccess` in full interface projections.
+Keeping side-effects out is the MVU property: `update` is a pure function
+of `(state, event)`.
 
 ## Keyed by component socket
 
@@ -75,6 +76,9 @@ interest it subscribed with, the daemon-minted `SubscriptionToken`, the
 latest `ProjectedInterfaceState`, and the connection liveness. A thin
 client can mirror daemon-projected read/write capability in these views,
 but criome approval submission still goes through the mentci daemon.
+`ObservationView::criome_access` is `Some(ReadOnly | ReadWrite)` after a
+full Mentci projection is folded; `None` means the client has not learned the
+mode and should remain observation-only.
 
 ## Approval state machine (kept, rebased)
 

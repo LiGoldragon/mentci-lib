@@ -16,8 +16,8 @@ use std::collections::BTreeMap;
 
 use meta_signal_mentci::ComponentSocketKind;
 use signal_mentci::{
-    InterfaceInterest, InterfaceStateObservation, MentciRequest, ProjectedInterfaceState,
-    QuestionProposal, RevisionCounter, SubscriberName, SubscriptionToken,
+    CriomeAccess, InterfaceInterest, InterfaceStateObservation, MentciRequest,
+    ProjectedInterfaceState, QuestionProposal, RevisionCounter, SubscriberName, SubscriptionToken,
 };
 
 use crate::approval::{ApprovalModel, ApprovalView};
@@ -249,6 +249,10 @@ impl ObservationModel {
                 })
                 .collect(),
             approval: self.approval.view(),
+            criome_access: self
+                .socket(ComponentSocketKind::Mentci)
+                .and_then(|slot| slot.latest())
+                .and_then(ProjectedInterfaceState::criome_access),
         }
     }
 
@@ -274,6 +278,10 @@ pub struct ObservationView {
     pub sockets: Vec<SocketView>,
     /// The approval surface snapshot.
     pub approval: ApprovalView,
+    /// The criome access level mirrored from the mentci daemon's latest full
+    /// projection. `None` until a full projection is folded; clients treat
+    /// `None` as observation-only.
+    pub criome_access: Option<CriomeAccess>,
 }
 
 /// One observed socket's header row.

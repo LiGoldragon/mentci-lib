@@ -69,6 +69,10 @@ future TUI clients, editor integrations, and status surfaces.
   Thin clients do not open criome sockets. They answer through the mentci
   daemon, and the daemon routes criome-sourced answers by the parked
   `AuthorizationRequestSlot` when it has write authority.
+- The daemon mirrors its criome access level into full interface
+  projections as `CriomeAccess`; `mentci-lib` exposes that on
+  `ObservationView` so thin clients can render observation-only or answerable
+  controls without opening criome themselves.
 
 ## Stack discipline
 
