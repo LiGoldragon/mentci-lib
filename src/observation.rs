@@ -22,6 +22,7 @@ use signal_mentci::{
 
 use crate::approval::{ApprovalModel, ApprovalView};
 use crate::cmd::Cmd;
+use crate::decision::CriomeVerdict;
 use crate::error::ComponentSocketLabel;
 use crate::event::{EngineEvent, SocketLiveness, UserEvent};
 
@@ -163,12 +164,27 @@ impl ObservationModel {
                 Vec::new()
             }
             UserEvent::AnswerQuestion { verdict } => {
-                let socket = ComponentSocketKind::Mentci;
                 let outcome = self.approval.answer(verdict.clone());
-                if outcome.verdict().is_some() {
-                    vec![Cmd::send(socket, MentciRequest::AnswerQuestion(verdict))]
-                } else {
-                    Vec::new()
+                if outcome.verdict().is_none() {
+                    // Unknown question — nothing closed, nothing to send.
+                    return Vec::new();
+                }
+                // A closed answer on a criome-sourced question routes its
+                // verdict straight back to criome by the slot the source
+                // parked; every other answer goes over the mentci socket. A
+                // Defer keeps the question pending (answered is None), so it
+                // reads no slot and submits no criome verdict.
+                match outcome
+                    .answered()
+                    .and_then(|question| question.proposal.source.criome_slot())
+                {
+                    Some(slot) => vec![Cmd::SubmitCriomeVerdict {
+                        verdict: CriomeVerdict::from_decision(slot.clone(), verdict.decision),
+                    }],
+                    None => vec![Cmd::send(
+                        ComponentSocketKind::Mentci,
+                        MentciRequest::AnswerQuestion(verdict),
+                    )],
                 }
             }
             UserEvent::ProposeEditedAnswer { proposal } => {

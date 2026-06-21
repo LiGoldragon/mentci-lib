@@ -16,13 +16,26 @@ use mentci_lib::{
 };
 
 fn question(identifier: &str) -> ApprovalQuestion {
+    question_with_source(identifier, ApprovalSource::AgentQuestion)
+}
+
+/// A criome-sourced question carrying the parked authorization slot — the
+/// motivating case for the verdict-by-slot seam.
+fn criome_question(identifier: &str, slot: &str) -> ApprovalQuestion {
+    question_with_source(
+        identifier,
+        ApprovalSource::CriomeEscalation(AuthorizationRequestSlot::new(slot)),
+    )
+}
+
+fn question_with_source(identifier: &str, source: ApprovalSource) -> ApprovalQuestion {
     ApprovalQuestion {
         identifier: QuestionIdentifier::new(identifier),
         proposal: QuestionProposal::new(
-            ApprovalSource::CriomeEscalation,
+            source,
             PromptText::new("authorize the thing"),
             Some(AnswerText::new("approve")),
-            ExplanationText::new("criome parked an authorization"),
+            ExplanationText::new("a question is pending"),
             Vec::new(),
         ),
     }
@@ -152,6 +165,73 @@ fn answering_a_question_emits_a_verdict_and_drops_it_from_pending() {
     ));
     assert_eq!(model.approval().pending().len(), 1);
     assert_eq!(model.approval().answered().len(), 1);
+}
+
+#[test]
+fn answering_a_criome_question_routes_a_submit_criome_verdict_by_slot() {
+    let mut model = ObservationModel::new(SubscriberName::new("test-client"));
+    let _ = model.on_user_event(UserEvent::Observe {
+        socket: ComponentSocketKind::Mentci,
+        interest: InterfaceInterest::FullInterfaceState,
+    });
+    model.on_engine_event(EngineEvent::ObservationOpened {
+        socket: ComponentSocketKind::Mentci,
+        opened: InterfaceObservationOpened {
+            token: SubscriptionToken::new("subscription-1"),
+            state: projected_with(vec![criome_question("question-1", "slot-1")]),
+        },
+    });
+
+    let verdict = ApprovalVerdict {
+        question: QuestionIdentifier::new("question-1"),
+        decision: ApprovalDecision::ApproveSuggestedAnswer,
+        answered_by: SubscriberName::new("test-client"),
+    };
+    let commands = model.on_user_event(UserEvent::AnswerQuestion { verdict });
+    assert_eq!(commands.len(), 1);
+    match &commands[0] {
+        Cmd::SubmitCriomeVerdict { verdict } => {
+            assert_eq!(verdict.decision(), AuthorizationApprovalDecision::Approve);
+            assert_eq!(
+                verdict.request_slot().payload(),
+                AuthorizationRequestSlot::new("slot-1").payload(),
+            );
+        }
+        other => panic!("expected SubmitCriomeVerdict, got {other:?}"),
+    }
+    // The criome-sourced question still leaves the pending queue.
+    assert_eq!(model.approval().pending().len(), 0);
+    assert_eq!(model.approval().answered().len(), 1);
+}
+
+#[test]
+fn deferring_a_criome_question_submits_no_criome_verdict_and_keeps_it_pending() {
+    let mut model = ObservationModel::new(SubscriberName::new("test-client"));
+    let _ = model.on_user_event(UserEvent::Observe {
+        socket: ComponentSocketKind::Mentci,
+        interest: InterfaceInterest::FullInterfaceState,
+    });
+    model.on_engine_event(EngineEvent::ObservationOpened {
+        socket: ComponentSocketKind::Mentci,
+        opened: InterfaceObservationOpened {
+            token: SubscriptionToken::new("subscription-1"),
+            state: projected_with(vec![criome_question("question-1", "slot-1")]),
+        },
+    });
+    let commands = model.on_user_event(UserEvent::AnswerQuestion {
+        verdict: ApprovalVerdict {
+            question: QuestionIdentifier::new("question-1"),
+            decision: ApprovalDecision::Defer,
+            answered_by: SubscriberName::new("test-client"),
+        },
+    });
+    assert!(
+        !commands
+            .iter()
+            .any(|command| matches!(command, Cmd::SubmitCriomeVerdict { .. })),
+        "defer must not submit a criome verdict"
+    );
+    assert_eq!(model.approval().pending().len(), 1);
 }
 
 #[test]
