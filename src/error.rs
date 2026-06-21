@@ -61,6 +61,8 @@ impl From<meta_signal_mentci::ComponentSocketKind> for ComponentSocketLabel {
             ComponentSocketKind::MetaMentci => "MetaMentci",
             ComponentSocketKind::Criome => "Criome",
             ComponentSocketKind::MetaCriome => "MetaCriome",
+            ComponentSocketKind::Introspect => "Introspect",
+            ComponentSocketKind::MetaIntrospect => "MetaIntrospect",
         })
     }
 }

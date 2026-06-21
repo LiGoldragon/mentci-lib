@@ -6,8 +6,9 @@ use signal_criome::AuthorizationRequestSlot;
 use signal_mentci::{
     AnswerText, ApprovalDecision, ApprovalQuestion, ApprovalSource, ApprovalVerdict,
     ExplanationText, InterfaceInterest, InterfaceObservationOpened, InterfaceProjection,
-    InterfaceState, ProjectedInterfaceState, PromptText, QuestionIdentifier, QuestionProposal,
-    RevisionCounter, StatusText, SubscriberName, SubscriptionToken,
+    InterfaceState, PaneContent, PaneLabel, ProjectedInterfaceState, PromptText,
+    QuestionIdentifier, QuestionProposal, RevisionCounter, StatusText, SubscriberName,
+    SubscriptionToken,
 };
 
 use mentci_lib::approval::{ApprovalClientIdentifier, ApprovalInterest, ApprovalUpdate};
@@ -49,13 +50,21 @@ fn projected_with_access(
     questions: Vec<ApprovalQuestion>,
     criome_access: CriomeAccess,
 ) -> ProjectedInterfaceState {
+    projected_with_panes(questions, Vec::new(), criome_access)
+}
+
+fn projected_with_panes(
+    questions: Vec<ApprovalQuestion>,
+    panes: Vec<PaneContent>,
+    criome_access: CriomeAccess,
+) -> ProjectedInterfaceState {
     ProjectedInterfaceState {
         revision: RevisionCounter::new(7),
         projection: InterfaceProjection::FullProjection(InterfaceState::new(
             RevisionCounter::new(7),
             StatusText::new("ready"),
             None,
-            Vec::new(),
+            panes,
             questions,
             criome_access,
         )),
@@ -288,6 +297,35 @@ fn view_carries_one_row_per_observed_socket() {
     });
     let view = model.view();
     assert_eq!(view.sockets.len(), 2);
+}
+
+#[test]
+fn folded_full_projection_surfaces_daemon_panes_in_the_view() {
+    let mut model = ObservationModel::new(SubscriberName::new("test-client"));
+    let _ = model.on_user_event(UserEvent::Observe {
+        socket: ComponentSocketKind::Mentci,
+        interest: InterfaceInterest::FullInterfaceState,
+    });
+
+    model.on_engine_event(EngineEvent::ObservationOpened {
+        socket: ComponentSocketKind::Mentci,
+        opened: InterfaceObservationOpened {
+            token: SubscriptionToken::new("subscription-1"),
+            state: projected_with_panes(
+                Vec::new(),
+                vec![PaneContent {
+                    pane: PaneLabel::new("introspect"),
+                    body: signal_mentci::ContextBody::new("(PrototypeWitness (prototype None None None None))"),
+                }],
+                CriomeAccess::ReadWrite,
+            ),
+        },
+    });
+
+    let view = model.view();
+    assert_eq!(view.panes.len(), 1);
+    assert_eq!(view.panes[0].pane.as_str(), "introspect");
+    assert!(view.panes[0].body.as_str().contains("PrototypeWitness"));
 }
 
 #[test]

@@ -16,8 +16,9 @@ use std::collections::BTreeMap;
 
 use meta_signal_mentci::ComponentSocketKind;
 use signal_mentci::{
-    CriomeAccess, InterfaceInterest, InterfaceStateObservation, MentciRequest,
-    ProjectedInterfaceState, QuestionProposal, RevisionCounter, SubscriberName, SubscriptionToken,
+    CriomeAccess, InterfaceInterest, InterfaceProjection, InterfaceStateObservation,
+    MentciRequest, PaneContent, ProjectedInterfaceState, QuestionProposal, RevisionCounter,
+    SubscriberName, SubscriptionToken,
 };
 
 use crate::approval::{ApprovalModel, ApprovalView};
@@ -93,6 +94,8 @@ impl From<ComponentSocketKind> for ComponentSocketKey {
             ComponentSocketKind::MetaMentci => 1,
             ComponentSocketKind::Criome => 2,
             ComponentSocketKind::MetaCriome => 3,
+            ComponentSocketKind::Introspect => 4,
+            ComponentSocketKind::MetaIntrospect => 5,
         })
     }
 }
@@ -103,7 +106,9 @@ impl ComponentSocketKey {
             0 => ComponentSocketKind::Mentci,
             1 => ComponentSocketKind::MetaMentci,
             2 => ComponentSocketKind::Criome,
-            _ => ComponentSocketKind::MetaCriome,
+            3 => ComponentSocketKind::MetaCriome,
+            4 => ComponentSocketKind::Introspect,
+            _ => ComponentSocketKind::MetaIntrospect,
         }
     }
 }
@@ -249,6 +254,11 @@ impl ObservationModel {
                 })
                 .collect(),
             approval: self.approval.view(),
+            panes: self
+                .socket(ComponentSocketKind::Mentci)
+                .and_then(|slot| slot.latest())
+                .map(Self::panes_from_projection)
+                .unwrap_or_default(),
             criome_access: self
                 .socket(ComponentSocketKind::Mentci)
                 .and_then(|slot| slot.latest())
@@ -269,6 +279,15 @@ impl ObservationModel {
             .entry(ComponentSocketKey::from(kind))
             .or_default()
     }
+
+    fn panes_from_projection(state: &ProjectedInterfaceState) -> Vec<PaneContent> {
+        match &state.projection {
+            InterfaceProjection::FullProjection(state) => state.panes().to_vec(),
+            InterfaceProjection::StatusProjection(_)
+            | InterfaceProjection::NotificationProjection(_)
+            | InterfaceProjection::PendingQuestionsProjection(_) => Vec::new(),
+        }
+    }
 }
 
 /// The per-frame snapshot a shell paints. Pure data, no GUI types.
@@ -278,6 +297,8 @@ pub struct ObservationView {
     pub sockets: Vec<SocketView>,
     /// The approval surface snapshot.
     pub approval: ApprovalView,
+    /// Open daemon-projected panes from the latest full Mentci observation.
+    pub panes: Vec<PaneContent>,
     /// The criome access level mirrored from the mentci daemon's latest full
     /// projection. `None` until a full projection is folded; clients treat
     /// `None` as observation-only.
