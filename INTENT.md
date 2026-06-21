@@ -7,13 +7,13 @@ mentci-lib IS; this file says what the psyche wants it to BE.*
 
 ## Purpose
 
-`mentci-lib` is the shared application and state-machine library for
-the Mentci component. The full component shape is the standard triad:
+`mentci-lib` is the client-side application and state-machine library
+for thin Mentci clients. The full component shape is the standard triad:
 the `mentci` daemon repository, the `signal-mentci` working signal
 contract repository, and the `meta-signal-mentci` meta policy contract
 repository. `mentci-lib` is not the daemon repo; it is the heavy library
-reused by the daemon and by thin client shells such as `mentci-egui`,
-future TUI/CLI clients, editor integrations, and status surfaces.
+reused by thin client shells such as `mentci-egui`, the mentci CLI,
+future TUI clients, editor integrations, and status surfaces.
 
 ## Constraints
 
@@ -39,20 +39,21 @@ future TUI/CLI clients, editor integrations, and status surfaces.
 - **The library holds typed records, never GUI-library types.**
   egui, iced, and Flutter widget types do not appear in this crate;
   rendering primitives live in each shell. The signal vocabulary lives in
-  `signal-mentci` / `meta-signal-mentci` (and `signal-criome` /
-  `meta-signal-criome` for the verdict path) and is consumed here, not
-  redefined; canonical state is owned by the mentci daemon, not here.
+  `signal-mentci` / `meta-signal-mentci` and is consumed here, not
+  redefined; canonical state and effects are owned by the mentci daemon,
+  not here.
 - **First-class component triad.** Mentci's runtime home is the future
   `mentci` daemon repository. `signal-mentci` carries the ordinary
   programmable-UI wire vocabulary; `meta-signal-mentci` carries startup
   configuration and reconfiguration. The daemon repository contains the
   daemon, thin CLI, and daemon-local Signal/Nexus/SEMA runtime schemas.
-- **Daemon-owned state, shared library implementation.** Mentci is a
+- **Daemon-owned state, client library implementation.** Mentci is a
   daemon-owned programmable UI surface: state changes in the daemon, and
-  every UI client paints daemon state. `mentci-lib` owns the typed state
-  machines and subscription model that the daemon and thin clients share;
-  the daemon owns persistence, sockets, key-unlock flow, and long-lived
-  runtime lifecycle.
+  every UI client paints daemon state. `mentci-lib` owns the client-side
+  mirrored model, local approval cursor, NOTA fallback renderer, and
+  side-effect descriptions clients dispatch to the daemon; the daemon
+  owns persistence, sockets, criome bridge, key-unlock flow, and
+  long-lived runtime lifecycle.
 - **Programmable client surface.** TUI, CLI, egui, editor integrations,
   status bars, popups, email bridges, and agentic flows are clients over
   the same Mentci daemon state. They subscribe to updates and submit
@@ -65,6 +66,9 @@ future TUI/CLI clients, editor integrations, and status surfaces.
 - **Criome owns the key store.** Mentci interacts heavily with the local
   criome instance for escalations and key-unlock/use. The key store is a
   criome concern; Mentci presents the human approval/key-unlock surface.
+  Thin clients do not open criome sockets. They answer through the mentci
+  daemon, and the daemon routes criome-sourced answers by the parked
+  `AuthorizationRequestSlot` when it has write authority.
 
 ## Stack discipline
 
@@ -72,8 +76,9 @@ future TUI/CLI clients, editor integrations, and status surfaces.
   no crate-name prefix on types. Per `primary/skills/naming.md` and
   `primary/skills/rust-discipline.md`.
 - The wire vocabulary is consumed from the live `signal-mentci` /
-  `meta-signal-mentci` contracts (and `signal-criome` /
-  `meta-signal-criome` for the criome verdict path), never redefined.
+  `meta-signal-mentci` contracts, never redefined. The criome verdict
+  conversion uses the live criome contract types as a typed contact point;
+  criome socket access is still a daemon concern.
 
 ## Scope — today, not eventually
 
@@ -83,8 +88,9 @@ Any "sema" reference here is today's `sema` storage kernel; any
 today's stack. Re-founded on the live contracts (forensic sub-report
 5): the MVU `ObservationModel`, the approval state machine, the
 NOTA-fallback renderer, and the closed-decision -> criome verdict
-mapping are implemented and green, with mentci-egui consuming the
-model. The daemon adopts the shared verdict mapping + renderer next.
+mapping are implemented and green, with mentci-egui and the mentci CLI
+consuming the model. Clients submit `AnswerQuestion` to the mentci
+daemon; the daemon owns any criome verdict side effect.
 Per `primary/ESSENCE.md` §"Today and eventually".
 
 *Source statements live in Spirit intent records and the project's

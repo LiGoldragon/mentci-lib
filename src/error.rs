@@ -1,4 +1,4 @@
-//! Typed `Error` for the shared mentci model. One enum per crate
+//! Typed `Error` for the client mentci model. One enum per crate
 //! (`skills/rust/errors.md`).
 
 use thiserror::Error;

@@ -1,4 +1,4 @@
-//! mentci-lib — the shared observability + control model for the mentci
+//! mentci-lib — the client observability + control model for the mentci
 //! programmable-UI component.
 //!
 //! Re-founded on the LIVE contracts (Spirit 7x5z, forensic sub-report 5). The
@@ -20,9 +20,9 @@
 //!   mapping (Spirit t00s), consuming the real `signal-criome` /
 //!   `meta-signal-criome` types.
 //!
-//! The library is the application; each shell (mentci-egui first) is the
-//! rendering. The daemon shares the same model so its canonical state and the
-//! clients' painted state cannot drift.
+//! The library is the client application model; each shell (the mentci CLI and
+//! mentci-egui first) supplies rendering and transport. The daemon owns
+//! canonical state and side effects, including the criome bridge.
 
 pub mod approval;
 pub mod cmd;

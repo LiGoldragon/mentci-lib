@@ -4,6 +4,6 @@ You **MUST** read AGENTS.md at `github:ligoldragon/lore` — the workspace contr
 
 ## Repo role
 
-The shared observability + control model for the mentci component, consumed by the daemon and every thin client. Holds the MVU `ObservationModel` keyed by component socket, the approval state machine over `signal-mentci`'s vocabulary, the edits-as-proposals flow, the NOTA-fallback renderer, and the closed-decision -> criome verdict mapping.
+The client-side observability + control model for thin mentci clients. Holds the MVU `ObservationModel` keyed by component socket, the approval state machine over `signal-mentci`'s vocabulary, the edits-as-proposals flow, the NOTA-fallback renderer, and the typed closed-decision -> criome verdict mapping that the daemon can reuse while keeping criome socket access daemon-owned.
 
 Re-founded on the live contracts (forensic sub-report 5); the model and its egui consumer build and test green. See `ARCHITECTURE.md`.

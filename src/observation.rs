@@ -1,7 +1,7 @@
-//! [`ObservationModel`] — the shared observability + control core.
+//! [`ObservationModel`] — the client observability + control core.
 //!
-//! This is the re-founded heart of mentci-lib: one MVU-shaped model the daemon
-//! and every thin client share. It is keyed by component socket
+//! This is the re-founded heart of mentci-lib: one MVU-shaped model thin
+//! clients share. It is keyed by component socket
 //! ([`ComponentSocketKind`] from `meta-signal-mentci` / `signal-standard`):
 //! mentci can observe its own canonical state, the meta surface, and a criome
 //! peer, each on its own connection, each folding into its own
@@ -22,7 +22,6 @@ use signal_mentci::{
 
 use crate::approval::{ApprovalModel, ApprovalView};
 use crate::cmd::Cmd;
-use crate::decision::CriomeVerdict;
 use crate::error::ComponentSocketLabel;
 use crate::event::{EngineEvent, SocketLiveness, UserEvent};
 
@@ -71,7 +70,7 @@ impl SocketObservation {
     }
 }
 
-/// The shared model. One per mentci session. Owns per-socket observations and
+/// The client model. One per mentci session. Owns per-socket observations and
 /// the client-side approval cursor. The subscriber name identities this model
 /// to every daemon it observes.
 #[derive(Debug, Clone)]
@@ -164,27 +163,20 @@ impl ObservationModel {
                 Vec::new()
             }
             UserEvent::AnswerQuestion { verdict } => {
+                // Clients reach criome only through the mentci daemon: a closed
+                // answer (criome-sourced or not) goes to the daemon over the
+                // mentci socket, and the daemon routes criome-sourced verdicts
+                // to criome by the parked slot (daemon-routing decision). The
+                // client never opens a criome socket; the slot the source
+                // carries is what lets the daemon route.
                 let outcome = self.approval.answer(verdict.clone());
-                if outcome.verdict().is_none() {
-                    // Unknown question — nothing closed, nothing to send.
-                    return Vec::new();
-                }
-                // A closed answer on a criome-sourced question routes its
-                // verdict straight back to criome by the slot the source
-                // parked; every other answer goes over the mentci socket. A
-                // Defer keeps the question pending (answered is None), so it
-                // reads no slot and submits no criome verdict.
-                match outcome
-                    .answered()
-                    .and_then(|question| question.proposal.source.criome_slot())
-                {
-                    Some(slot) => vec![Cmd::SubmitCriomeVerdict {
-                        verdict: CriomeVerdict::from_decision(slot.clone(), verdict.decision),
-                    }],
-                    None => vec![Cmd::send(
+                if outcome.verdict().is_some() {
+                    vec![Cmd::send(
                         ComponentSocketKind::Mentci,
                         MentciRequest::AnswerQuestion(verdict),
-                    )],
+                    )]
+                } else {
+                    Vec::new()
                 }
             }
             UserEvent::ProposeEditedAnswer { proposal } => {

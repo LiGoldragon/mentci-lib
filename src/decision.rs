@@ -6,11 +6,10 @@
 //! `meta-signal-criome` [`AuthorizationApprovalDecision`] keyed by the
 //! [`AuthorizationRequestSlot`] criome parked.
 //!
-//! This mapping is the shared model's job — the daemon's `criome_bridge`
-//! currently owns a private copy of it; re-founded here it is the one place
-//! both the daemon and any control client read the projection from. It
-//! consumes the real criome contract types rather than redefining them
-//! (the whole point of the re-founding: no duplicate vocabularies).
+//! This mapping is a typed contact point the daemon can reuse while keeping
+//! criome socket access daemon-owned. It consumes the real criome contract
+//! types rather than redefining them (the whole point of the re-founding: no
+//! duplicate vocabularies).
 
 use meta_signal_criome::AuthorizationApprovalDecision;
 use signal_criome::AuthorizationRequestSlot;

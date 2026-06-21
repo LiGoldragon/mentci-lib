@@ -1,9 +1,9 @@
 # ARCHITECTURE — mentci-lib
 
-The shared observability + control model for the Mentci component. The
-`mentci` daemon and every thin Mentci client (mentci-egui first) consume
-this one model so canonical daemon state and painted client state cannot
-drift.
+The client-side observability + control model for the Mentci component.
+Thin Mentci clients (the mentci CLI and mentci-egui first) consume this
+one model so painted client state follows canonical daemon state without
+duplicating approval logic.
 
 This crate was re-founded on the LIVE contracts (forensic sub-report 5;
 Spirit 7x5z). The original 2026-04-29 design predated the daemon and
@@ -19,7 +19,7 @@ edits-as-proposals, and the approval state machine.
 ```
             ┌──────────────────────────────────────────┐
             │              mentci-lib                   │
-            │   SHARED OBSERVABILITY + CONTROL MODEL    │
+            │    CLIENT OBSERVABILITY + CONTROL MODEL    │
             │                                           │
             │  observation::ObservationModel  (MVU)     │
             │    keyed by ComponentSocketKind           │
@@ -35,8 +35,8 @@ edits-as-proposals, and the approval state machine.
             │    NOTA-fallback for typed replies/objects│
             │                                           │
             │  decision::CriomeVerdict                  │
-            │    closed ApprovalDecision -> criome      │
-            │    AuthorizationApprovalDecision (t00s)   │
+            │    typed ApprovalDecision -> criome       │
+            │    AuthorizationApprovalDecision mapping  │
             └───────────┬───────────────────────────────┘
                         │ consumes the live contracts
         ┌───────────────┼───────────────┬───────────────┐
@@ -51,7 +51,7 @@ edits-as-proposals, and the approval state machine.
 
 ## The MVU contract
 
-The whole surface is two methods on `ObservationModel`:
+The whole client surface is two methods on `ObservationModel`:
 
 - `on_user_event(UserEvent) -> Vec<Cmd>` and
   `on_engine_event(EngineEvent) -> Vec<Cmd>` — the `update` half.
@@ -60,8 +60,11 @@ The whole surface is two methods on `ObservationModel`:
 Side-effects never run inside the model; a `Cmd` describes a
 `signal-mentci` request addressed to a `ComponentSocketKind`, and the
 outer runtime owns the `signal-frame` transport that turns it into a
-`MentciFrame`. Keeping side-effects out is the MVU property:
-`update` is a pure function of `(state, event)`.
+`MentciFrame`. Clients answer approval questions by sending
+`AnswerQuestion` to the mentci daemon. The daemon owns the criome bridge
+and routes criome-sourced answers by parked slot when it has write
+authority. Keeping side-effects out is the MVU property: `update` is a
+pure function of `(state, event)`.
 
 ## Keyed by component socket
 
@@ -69,9 +72,9 @@ outer runtime owns the `signal-frame` transport that turns it into a
 `ComponentSocketKind` (`Mentci`, `MetaMentci`, `Criome`, `MetaCriome`
 from `meta-signal-mentci` / signal-standard). Each slot carries the
 interest it subscribed with, the daemon-minted `SubscriptionToken`, the
-latest `ProjectedInterfaceState`, and the connection liveness. Mentci
-can observe its own canonical state AND a criome peer on independent
-connections, folding each into its own slot.
+latest `ProjectedInterfaceState`, and the connection liveness. A thin
+client can mirror daemon-projected read/write capability in these views,
+but criome approval submission still goes through the mentci daemon.
 
 ## Approval state machine (kept, rebased)
 
@@ -90,9 +93,10 @@ projected slice.
 `decision::CriomeVerdict::from_decision(slot, decision)` projects a
 closed `ApprovalDecision` onto the `AuthorizationRequestSlot` criome
 parked, yielding a `meta-signal-criome` `AuthorizationApprovalDecision`.
-This is the one place the two enums meet (`skills/enum-contact-points.md`);
-the daemon's `criome_bridge` currently holds a private copy of the same
-match, which collapses onto this shared mapping at integration.
+This is the named contact point where the two enums meet
+(`skills/enum-contact-points.md`). The mapping is reusable by the daemon,
+but producing and submitting criome verdicts is not a client-library side
+effect.
 
 ## NOTA-fallback rendering (xlrk)
 
@@ -112,16 +116,16 @@ attaches to them. Per `~/primary/skills/rust-discipline.md`.
 
 ## Adoption
 
-- **mentci-egui** consumes `ObservationModel` + `RenderNota` today: it
+- **mentci CLI and mentci-egui** consume `ObservationModel` +
+  `RenderNota` today: each shell
   holds the model, feeds typed replies in as `EngineEvent`s, and renders
   every reply through the shared renderer. The shell owns no approval
   logic or per-socket state of its own.
-- **mentci daemon** adopts next: its `state.rs` already builds the same
-  contract types; the shared move is to let the daemon's verdict path use
-  `decision::CriomeVerdict` instead of `criome_bridge`'s private
-  `map_decision`, and to let any introspection surface reuse
-  `RenderNota`. The daemon keeps persistence, sockets, key-unlock, and
-  lifecycle; mentci-lib owns the typed model both sides share.
+- **mentci daemon** owns canonical state and effects: its `state.rs`
+  builds the contract types, its criome bridge observes parked questions
+  and submits verdicts, and its projected interface state is what clients
+  mirror. It may reuse the typed verdict mapping from this crate, while
+  persistence, sockets, key-unlock, and lifecycle remain daemon-local.
 
 ## Scaffold note (designer prototype)
 

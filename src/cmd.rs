@@ -23,15 +23,6 @@ pub enum Cmd {
         socket: ComponentSocketKind,
         request: MentciRequest,
     },
-
-    /// Forward a closed verdict to criome's meta socket. Carries the typed
-    /// criome verdict and the request slot it answers — the model already did
-    /// the closed-decision -> criome mapping
-    /// (`crate::decision::CriomeVerdict`); the runtime only delivers it over
-    /// the `meta-signal-criome` `SubmitAuthorizationApproval` path.
-    SubmitCriomeVerdict {
-        verdict: crate::decision::CriomeVerdict,
-    },
 }
 
 impl Cmd {

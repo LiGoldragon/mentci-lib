@@ -1,4 +1,4 @@
-//! [`UserEvent`] and [`EngineEvent`] — the two event kinds the shared model
+//! [`UserEvent`] and [`EngineEvent`] — the two event kinds the client model
 //! accepts.
 //!
 //! Closed enums; one variant per gesture or daemon push. The model is
