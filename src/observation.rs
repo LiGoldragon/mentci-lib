@@ -210,7 +210,11 @@ impl ObservationModel {
                 self.fold_projection(socket, opened.state);
                 Vec::new()
             }
-            EngineEvent::InterfaceStateChanged { socket, token, state } => {
+            EngineEvent::InterfaceStateChanged {
+                socket,
+                token,
+                state,
+            } => {
                 if self
                     .socket(socket)
                     .and_then(|slot| slot.token.clone())

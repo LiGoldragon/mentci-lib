@@ -33,9 +33,3 @@ nota-text = [
 unsafe_code = "forbid"
 unused      = { level = "warn", priority = -1 }
 dead_code   = "warn"
-
-# Designer prototype: consume the local signal-mentci epic branch (the
-# CriomeEscalation-carries-the-slot seam) before operator integrates it to
-# main. Collapses to the plain git dep once the branch lands on main.
-[patch."https://github.com/LiGoldragon/signal-mentci"]
-signal-mentci = { path = "/home/li/wt/github.com/LiGoldragon/signal-mentci/re-found-on-live-contracts" }

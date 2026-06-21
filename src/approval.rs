@@ -68,7 +68,10 @@ impl ApprovalInterest {
                     | ApprovalUpdate::QuestionSelected(_)
             ),
             Self::AnsweredVerdicts => {
-                matches!(update, ApprovalUpdate::Snapshot(_) | ApprovalUpdate::QuestionAnswered(_))
+                matches!(
+                    update,
+                    ApprovalUpdate::Snapshot(_) | ApprovalUpdate::QuestionAnswered(_)
+                )
             }
         }
     }
@@ -105,7 +108,11 @@ impl ApprovalSubscription {
 
     fn delivery_for(&self, update: &ApprovalUpdate) -> Option<ApprovalDelivery> {
         if self.interest.accepts(update) {
-            Some(ApprovalDelivery::new(self.identifier, self.client, update.clone()))
+            Some(ApprovalDelivery::new(
+                self.identifier,
+                self.client,
+                update.clone(),
+            ))
         } else {
             None
         }
@@ -220,7 +227,10 @@ impl ApprovalModel {
             .as_ref()
             .is_some_and(|identifier| self.is_pending(identifier));
         if !selection_survives {
-            self.selected = self.pending.first().map(|question| question.identifier.clone());
+            self.selected = self
+                .pending
+                .first()
+                .map(|question| question.identifier.clone());
         }
         self.deliveries_for(ApprovalUpdate::Snapshot(self.view()))
     }

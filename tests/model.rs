@@ -11,9 +11,7 @@ use signal_mentci::{
 };
 
 use mentci_lib::approval::{ApprovalClientIdentifier, ApprovalInterest};
-use mentci_lib::{
-    Cmd, CriomeVerdict, EngineEvent, ObservationModel, SocketLiveness, UserEvent,
-};
+use mentci_lib::{Cmd, CriomeVerdict, EngineEvent, ObservationModel, SocketLiveness, UserEvent};
 
 fn question(identifier: &str) -> ApprovalQuestion {
     question_with_source(identifier, ApprovalSource::AgentQuestion)
@@ -263,7 +261,8 @@ fn subscriptions_receive_deliveries_on_state_change() {
 #[test]
 fn closed_decision_maps_to_the_criome_verdict() {
     let slot = AuthorizationRequestSlot::new("request-slot-42");
-    let approve = CriomeVerdict::from_decision(slot.clone(), ApprovalDecision::ApproveSuggestedAnswer);
+    let approve =
+        CriomeVerdict::from_decision(slot.clone(), ApprovalDecision::ApproveSuggestedAnswer);
     assert_eq!(approve.decision(), AuthorizationApprovalDecision::Approve);
     assert_eq!(approve.request_slot().payload(), slot.payload());
 

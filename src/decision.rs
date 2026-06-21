@@ -30,7 +30,10 @@ impl CriomeVerdict {
     /// Project a closed mentci [`ApprovalDecision`] onto the criome request
     /// slot it answers. This is the canonical approve/reject/defer ->
     /// criome-verdict mapping (t00s).
-    pub fn from_decision(request_slot: AuthorizationRequestSlot, decision: ApprovalDecision) -> Self {
+    pub fn from_decision(
+        request_slot: AuthorizationRequestSlot,
+        decision: ApprovalDecision,
+    ) -> Self {
         Self {
             request_slot,
             decision: CriomeDecision::from(decision).into_inner(),
