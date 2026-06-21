@@ -62,16 +62,12 @@ fn observe_emits_a_request_and_marks_connecting() {
         interest: InterfaceInterest::FullInterfaceState,
     });
     assert_eq!(commands.len(), 1);
-    match &commands[0] {
-        Cmd::SendRequest { socket, request } => {
-            assert_eq!(*socket, ComponentSocketKind::Mentci);
-            assert!(matches!(
-                request,
-                signal_mentci::Input::ObserveInterfaceState(_)
-            ));
-        }
-        other => panic!("expected SendRequest, got {other:?}"),
-    }
+    let Cmd::SendRequest { socket, request } = &commands[0];
+    assert_eq!(*socket, ComponentSocketKind::Mentci);
+    assert!(matches!(
+        request,
+        signal_mentci::Input::ObserveInterfaceState(_)
+    ));
     let slot = model.socket(ComponentSocketKind::Mentci).unwrap();
     assert!(matches!(slot.liveness(), SocketLiveness::Connecting));
 }
@@ -168,44 +164,9 @@ fn answering_a_question_emits_a_verdict_and_drops_it_from_pending() {
 }
 
 #[test]
-fn answering_a_criome_question_routes_a_submit_criome_verdict_by_slot() {
-    let mut model = ObservationModel::new(SubscriberName::new("test-client"));
-    let _ = model.on_user_event(UserEvent::Observe {
-        socket: ComponentSocketKind::Mentci,
-        interest: InterfaceInterest::FullInterfaceState,
-    });
-    model.on_engine_event(EngineEvent::ObservationOpened {
-        socket: ComponentSocketKind::Mentci,
-        opened: InterfaceObservationOpened {
-            token: SubscriptionToken::new("subscription-1"),
-            state: projected_with(vec![criome_question("question-1", "slot-1")]),
-        },
-    });
-
-    let verdict = ApprovalVerdict {
-        question: QuestionIdentifier::new("question-1"),
-        decision: ApprovalDecision::ApproveSuggestedAnswer,
-        answered_by: SubscriberName::new("test-client"),
-    };
-    let commands = model.on_user_event(UserEvent::AnswerQuestion { verdict });
-    assert_eq!(commands.len(), 1);
-    match &commands[0] {
-        Cmd::SubmitCriomeVerdict { verdict } => {
-            assert_eq!(verdict.decision(), AuthorizationApprovalDecision::Approve);
-            assert_eq!(
-                verdict.request_slot().payload(),
-                AuthorizationRequestSlot::new("slot-1").payload(),
-            );
-        }
-        other => panic!("expected SubmitCriomeVerdict, got {other:?}"),
-    }
-    // The criome-sourced question still leaves the pending queue.
-    assert_eq!(model.approval().pending().len(), 0);
-    assert_eq!(model.approval().answered().len(), 1);
-}
-
-#[test]
-fn deferring_a_criome_question_submits_no_criome_verdict_and_keeps_it_pending() {
+fn answering_a_criome_question_sends_the_verdict_to_the_daemon() {
+    // Daemon-routing: the client never opens a criome socket; it sends
+    // AnswerQuestion to the mentci daemon, which routes to criome by the slot.
     let mut model = ObservationModel::new(SubscriberName::new("test-client"));
     let _ = model.on_user_event(UserEvent::Observe {
         socket: ComponentSocketKind::Mentci,
@@ -221,17 +182,21 @@ fn deferring_a_criome_question_submits_no_criome_verdict_and_keeps_it_pending() 
     let commands = model.on_user_event(UserEvent::AnswerQuestion {
         verdict: ApprovalVerdict {
             question: QuestionIdentifier::new("question-1"),
-            decision: ApprovalDecision::Defer,
+            decision: ApprovalDecision::ApproveSuggestedAnswer,
             answered_by: SubscriberName::new("test-client"),
         },
     });
-    assert!(
-        !commands
-            .iter()
-            .any(|command| matches!(command, Cmd::SubmitCriomeVerdict { .. })),
-        "defer must not submit a criome verdict"
-    );
-    assert_eq!(model.approval().pending().len(), 1);
+    assert_eq!(commands.len(), 1);
+    assert!(matches!(
+        &commands[0],
+        Cmd::SendRequest {
+            socket: ComponentSocketKind::Mentci,
+            request: signal_mentci::Input::AnswerQuestion(_),
+        }
+    ));
+    // The criome-sourced question leaves the pending queue once closed.
+    assert_eq!(model.approval().pending().len(), 0);
+    assert_eq!(model.approval().answered().len(), 1);
 }
 
 #[test]
