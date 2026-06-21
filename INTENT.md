@@ -7,13 +7,20 @@ mentci-lib IS; this file says what the psyche wants it to BE.*
 
 ## Purpose
 
-`mentci-lib` is the shared application and state-machine library for
-the Mentci component. The full component shape is the standard triad:
-the `mentci` daemon repository, the `signal-mentci` working signal
-contract repository, and the `meta-signal-mentci` meta policy contract
-repository. `mentci-lib` is not the daemon repo; it is the heavy library
-reused by the daemon and by thin client shells such as `mentci-egui`,
-future TUI/CLI clients, editor integrations, and status surfaces.
+`mentci-lib` is the CLIENT-side shared application and state-machine library
+for the Mentci component — the heavy library reused by every Mentci client
+shell: the `mentci` CLI, `mentci-egui`, future TUI/editor integrations, and
+status surfaces. The full component shape is the standard triad: the `mentci`
+daemon repository, the `signal-mentci` working signal contract, and the
+`meta-signal-mentci` meta policy contract. `mentci-lib` is not the daemon
+repo and is NOT adopted wholesale by the daemon: the daemon keeps its own
+canonical state, sockets, and criome bridge, and imports from `mentci-lib`
+only `decision::CriomeVerdict` — the one closed-decision -> criome mapping
+both sides must agree on (decided 2026-06-21, recorded here because the
+guardian classed read-only/write + daemon-routing as design detail, not
+Spirit intent). Everything else in this crate is client-side: the
+`ObservationModel`, the approval state machine, and the NOTA-fallback
+renderer serve client shells, not the daemon.
 
 ## Constraints
 
@@ -50,9 +57,28 @@ future TUI/CLI clients, editor integrations, and status surfaces.
 - **Daemon-owned state, shared library implementation.** Mentci is a
   daemon-owned programmable UI surface: state changes in the daemon, and
   every UI client paints daemon state. `mentci-lib` owns the typed state
-  machines and subscription model that the daemon and thin clients share;
-  the daemon owns persistence, sockets, key-unlock flow, and long-lived
-  runtime lifecycle.
+  machines and subscription model that thin clients share; the daemon
+  owns persistence, sockets, key-unlock flow, and long-lived runtime
+  lifecycle.
+- **Daemon-routing: clients reach criome only through the mentci daemon.**
+  A client never opens a criome socket. To answer an escalated question a
+  client emits `AnswerQuestion` to the mentci daemon over the mentci socket;
+  the daemon owns the criome bridge, absorbed the parked question, and routes
+  the verdict to criome by the `AuthorizationRequestSlot` the question's
+  `ApprovalSource::CriomeEscalation` carries. The client model therefore only
+  ever emits a `SendRequest` to `ComponentSocketKind::Mentci`; the slot the
+  source carries is what lets the daemon route, not the client.
+- **Read-only / write criome access is mirrored from the daemon.** The daemon
+  holds its criome connection in one of two modes — read-only (observe parked
+  authorizations) or write (observe + submit verdicts) — and mirrors that
+  access level to its clients via `InterfaceState`'s `criome_access:
+  CriomeAccess` field. A client of a read-only daemon opens observation-only:
+  it sees parked questions but presents no answer controls. A client of a write
+  daemon can answer. `mentci-lib` reads the mode through
+  `ProjectedInterfaceState::criome_access` and surfaces it on `ObservationView`
+  so the egui card and other shells gate their answer controls on it. The
+  access level is the daemon's to set and the client's to reflect; the client
+  never elevates it.
 - **Programmable client surface.** TUI, CLI, egui, editor integrations,
   status bars, popups, email bridges, and agentic flows are clients over
   the same Mentci daemon state. They subscribe to updates and submit
