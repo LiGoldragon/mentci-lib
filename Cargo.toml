@@ -13,6 +13,14 @@ signal-frame       = { git = "https://github.com/LiGoldragon/signal-frame", bran
 meta-signal-mentci = { git = "https://github.com/LiGoldragon/meta-signal-mentci", branch = "main" }
 signal-criome      = { git = "https://github.com/LiGoldragon/signal-criome", branch = "main" }
 meta-signal-criome = { git = "https://github.com/LiGoldragon/meta-signal-criome", branch = "main" }
+# The universal-client second component: introspect's working signal. mentci-lib
+# queries the introspect daemon's ComponentTrace operation through this contract,
+# proving the client talks to more than its own triad's signal-mentci.
+signal-introspect  = { git = "https://github.com/LiGoldragon/signal-introspect", branch = "trace-introspect-slice" }
+# EngineIdentifier (the introspect query's engine filter) is owned by
+# signal-persona; signal-introspect re-imports it privately, so the client
+# depends on signal-persona for the typed identifier rather than mirroring it.
+signal-persona     = { git = "https://github.com/LiGoldragon/signal-persona", branch = "main" }
 nota-next          = { git = "https://github.com/LiGoldragon/nota-next.git", branch = "main", optional = true }
 thiserror          = "2"
 
@@ -27,6 +35,8 @@ nota-text = [
   "meta-signal-mentci/nota-text",
   "signal-criome/nota-text",
   "meta-signal-criome/nota-text",
+  "signal-introspect/nota-text",
+  "signal-persona/nota-text",
 ]
 
 [lints.rust]

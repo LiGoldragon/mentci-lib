@@ -29,6 +29,7 @@ pub mod cmd;
 pub mod decision;
 pub mod error;
 pub mod event;
+pub mod introspect;
 pub mod observation;
 pub mod render;
 
@@ -43,6 +44,17 @@ pub use cmd::Cmd;
 pub use decision::{CriomeDecision, CriomeVerdict};
 pub use error::{Error, Result};
 pub use event::{EngineEvent, SocketLiveness, UserEvent};
+/// The universal-client seed: a typed client for the introspect daemon's
+/// query socket, plus the `signal-introspect` types a shell renders. mentci-lib
+/// now speaks a second component's contract, not just `signal-mentci`.
+pub use introspect::IntrospectClient;
+pub use signal_introspect::{
+    ComponentTrace, ComponentTraceEvent, IntrospectionTarget, TraceEventName, TraceLayer,
+    TraceSequence,
+};
+/// The engine filter the introspect query carries, re-exported from its owning
+/// contract so a shell names one engine without depending on signal-persona.
+pub use signal_persona::EngineIdentifier;
 pub use observation::{
     ObservationModel, ObservationView, PresentableQuestion, SocketObservation, SocketView,
 };

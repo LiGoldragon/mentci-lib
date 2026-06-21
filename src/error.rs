@@ -28,6 +28,35 @@ pub enum Error {
     /// does not own.
     #[error("model invariant violated: {reason}")]
     InvariantViolated { reason: String },
+
+    /// The introspect-query socket connect / write / read failed. This is the
+    /// universal-client seed reaching a second component (introspect); the
+    /// transport carries the typed I/O detail rather than a String catch-all.
+    #[error("introspect socket I/O failed: {detail}")]
+    IntrospectSocket { detail: String },
+
+    /// The introspect daemon answered with a frame shape that is not an
+    /// accepted single-operation reply — a rejection, a streaming frame, or an
+    /// unexpected reply variant. Named so the caller can distinguish a wire
+    /// fault from a transport fault.
+    #[error("introspect daemon returned an unexpected frame: {detail}")]
+    UnexpectedIntrospectFrame { detail: String },
+}
+
+impl From<std::io::Error> for Error {
+    fn from(source: std::io::Error) -> Self {
+        Self::IntrospectSocket {
+            detail: source.to_string(),
+        }
+    }
+}
+
+impl From<signal_frame::FrameError> for Error {
+    fn from(source: signal_frame::FrameError) -> Self {
+        Self::UnexpectedIntrospectFrame {
+            detail: source.to_string(),
+        }
+    }
 }
 
 pub type Result<T> = core::result::Result<T, Error>;

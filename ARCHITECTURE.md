@@ -111,6 +111,27 @@ NOTA projection for everything else — the same path agents use. With the
 `nota-text` feature this is the real `nota-next` projection; without it
 the model still compiles and falls back to `Debug`.
 
+## Universal-client seed (introspect::IntrospectClient)
+
+The first proof that mentci-lib is a *universal* client, not a single-triad
+one: `introspect::IntrospectClient` talks to a SECOND component — the
+introspect daemon — through introspect's own `signal-introspect` contract.
+It owns the introspection-query socket path and a typed `component_trace`
+method that sends `IntrospectionRequest::ComponentTrace(ComponentTraceQuery)`
+over a length-prefixed `signal-frame` (the generated codec, no hand-rolled
+framing) and returns the typed `ComponentTrace` reply. The wire shape mirrors
+the introspect daemon's own in-tree client exactly: request is
+`encode_length_prefixed`; the daemon answers with a 4-byte length prefix
+wrapping a bare frame archive, decoded with `IntrospectionFrame::decode`.
+
+The mentci MVU core (`ObservationModel`) stays keyed by `signal-mentci`
+exclusively — introspect is a query surface, not canonical mentci state, so
+it lives as its own data-bearing noun a shell calls off-thread and renders
+through `RenderNota`, the same path the shell already uses for daemon replies.
+When the next slice folds introspect observations into a model, this client is
+the transport it dispatches. The introspect failures flow through the same
+crate `Error` (`IntrospectSocket`, `UnexpectedIntrospectFrame`).
+
 ## Stack discipline
 
 Closed enums; one typed `Error` enum (`thiserror`); full English words
