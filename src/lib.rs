@@ -36,6 +36,9 @@ pub mod render;
 /// `meta-signal-mentci` so consumers address sockets through the shared
 /// surface rather than depending on the meta contract directly.
 pub use meta_signal_mentci::ComponentSocketKind;
+/// The criome access level the daemon mirrors into canonical state, re-exported
+/// so shells gate controls through mentci-lib rather than the wire contract.
+pub use signal_mentci::CriomeAccess;
 
 pub use cmd::Cmd;
 pub use decision::{CriomeDecision, CriomeVerdict};
