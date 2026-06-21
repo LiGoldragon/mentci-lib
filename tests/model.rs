@@ -10,7 +10,7 @@ use signal_mentci::{
     RevisionCounter, StatusText, SubscriberName, SubscriptionToken,
 };
 
-use mentci_lib::approval::{ApprovalClientIdentifier, ApprovalInterest};
+use mentci_lib::approval::{ApprovalClientIdentifier, ApprovalInterest, ApprovalUpdate};
 use mentci_lib::{
     Cmd, CriomeAccess, CriomeVerdict, EngineEvent, ObservationModel, SocketLiveness, UserEvent,
 };
@@ -210,6 +210,10 @@ fn answering_a_criome_question_sends_the_verdict_to_the_daemon() {
 #[test]
 fn defer_keeps_the_question_pending() {
     let mut approval = mentci_lib::approval::ApprovalModel::default();
+    let _receipt = approval.subscribe(
+        ApprovalClientIdentifier::new(1),
+        ApprovalInterest::PendingQuestions,
+    );
     let _ = approval.absorb_pending(vec![question("question-1")]);
     let outcome = approval.answer(ApprovalVerdict {
         question: QuestionIdentifier::new("question-1"),
@@ -218,6 +222,15 @@ fn defer_keeps_the_question_pending() {
     });
     assert!(outcome.answered().is_none());
     assert_eq!(approval.pending().len(), 1);
+    assert_eq!(outcome.deliveries().len(), 1);
+    assert_eq!(
+        outcome.deliveries()[0].client(),
+        ApprovalClientIdentifier::new(1)
+    );
+    assert!(matches!(
+        outcome.deliveries()[0].update(),
+        ApprovalUpdate::QuestionSelected(question) if question == &QuestionIdentifier::new("question-1")
+    ));
 }
 
 #[test]

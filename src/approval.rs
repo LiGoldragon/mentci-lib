@@ -262,11 +262,11 @@ impl ApprovalModel {
     /// the question and logs the verdict, advancing the cursor.
     pub fn answer(&mut self, verdict: ApprovalVerdict) -> ApprovalAnswerOutcome {
         if matches!(verdict.decision, ApprovalDecision::Defer) {
-            let _ = self.select(verdict.question.clone());
+            let deliveries = self.select(verdict.question.clone());
             return ApprovalAnswerOutcome {
                 answered: None,
                 verdict: Some(verdict),
-                deliveries: Vec::new(),
+                deliveries,
             };
         }
         let Some(index) = self
