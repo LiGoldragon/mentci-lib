@@ -13,7 +13,7 @@ signal-frame       = { git = "https://github.com/LiGoldragon/signal-frame", bran
 meta-signal-mentci = { git = "https://github.com/LiGoldragon/meta-signal-mentci", branch = "main" }
 signal-criome      = { git = "https://github.com/LiGoldragon/signal-criome", branch = "main" }
 meta-signal-criome = { git = "https://github.com/LiGoldragon/meta-signal-criome", branch = "main" }
-nota-next          = { git = "https://github.com/LiGoldragon/nota-next.git", branch = "main", optional = true }
+nota-next          = { package = "nota", git = "https://github.com/LiGoldragon/nota-next.git", branch = "main", optional = true }
 thiserror          = "2"
 
 [features]
