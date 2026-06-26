@@ -351,7 +351,7 @@ dependencies = [
 [[package]]
 name = "meta-signal-mentci"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/meta-signal-mentci?branch=main#a337a42ac80a90edcc7793aa831ed0f0ead0cafb"
+source = "git+https://github.com/LiGoldragon/meta-signal-mentci?branch=main#240adb1d74ab8ece1335da69de99c7381cc44efb"
 dependencies = [
  "nota",
  "rkyv",
@@ -668,7 +668,7 @@ dependencies = [
 [[package]]
 name = "signal-mentci"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal-mentci?branch=main#083055caec44a9530e3e242b257c5ee969e8d599"
+source = "git+https://github.com/LiGoldragon/signal-mentci?branch=main#32f04f44901a9b59a73185213d54811d5d11f7c7"
 dependencies = [
  "nota",
  "rkyv",
