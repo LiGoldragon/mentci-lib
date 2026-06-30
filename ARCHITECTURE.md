@@ -14,6 +14,50 @@ hand-rolled approval vocabulary that `signal-mentci` now owns. The
 valuable shape survived the rebase: the MVU model-view-update contract,
 edits-as-proposals, and the approval state machine.
 
+## Component triad and ownership boundary
+
+`mentci-lib` is the heavy client-side library reused by thin client shells —
+`mentci-egui`, the mentci CLI, future TUI clients, editor integrations, and
+status surfaces. It is **not** the daemon repository. Mentci's runtime home is
+the `mentci` daemon repository, which holds the daemon, its thin CLI, and the
+daemon-local Signal/Nexus/SEMA runtime schemas. The wire vocabulary lives in
+`signal-mentci` (ordinary programmable-UI wire) and `meta-signal-mentci`
+(startup configuration and reconfiguration); both are consumed here, never
+redefined.
+
+State and effects are daemon-owned; this is a client library. Mentci is a
+daemon-owned programmable UI surface: state changes in the daemon, and every UI
+client paints daemon state. The daemon owns persistence, sockets, the criome
+bridge, the key-unlock flow, and long-lived runtime lifecycle. `mentci-lib`
+owns only the client-side mirrored model, the local approval cursor, the
+NOTA-fallback renderer, and the side-effect descriptions clients dispatch to
+the daemon.
+
+Constraints (review and test seeds):
+
+- **No GUI-library types in this crate.** egui, iced, and Flutter widget types
+  do not appear here; rendering primitives live in each shell. The library
+  holds typed records only.
+- **Thin clients do not open criome sockets.** Mentci presents the human
+  approval and key-unlock surface, but the key store is a criome concern.
+  Clients answer through the mentci daemon, which routes criome-sourced answers
+  by the parked `AuthorizationRequestSlot` when it has write authority.
+- **Programmable client surface.** TUI, CLI, egui, editor integrations, status
+  bars, popups, email bridges, and agentic flows are all clients over the same
+  Mentci daemon state. They subscribe to updates and submit responses rather
+  than owning separate approval logic.
+
+## Scope — today, not eventually
+
+Any "sema" reference here is today's `sema` storage kernel; any "criome"
+reference is today's `criome` daemon. The eventual `Sema` / `Criome` are
+broader; `mentci-lib` is a realization step on today's stack, re-founded on the
+live contracts. The MVU `ObservationModel`, the approval state machine, the
+NOTA-fallback renderer, and the closed-decision -> criome verdict mapping are
+implemented and green, with mentci-egui and the mentci CLI consuming the model.
+Clients submit `AnswerQuestion` to the mentci daemon; the daemon owns any
+criome verdict side effect.
+
 ## What the crate IS now
 
 ```
