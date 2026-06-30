@@ -58,6 +58,36 @@ implemented and green, with mentci-egui and the mentci CLI consuming the model.
 Clients submit `AnswerQuestion` to the mentci daemon; the daemon owns any
 criome verdict side effect.
 
+## Mentci stack direction
+
+These archived intent records frame where the Mentci stack is heading; the
+universal-UI-surface direction (`7x5z`) is already realized throughout this
+document.
+
+- **Async engine layer (`jwm9`).** Beyond today's client MVU model,
+  `mentci-lib` is the asynchronous engine layer for Mentci, carrying its own
+  actor system with room to host Nexus and SEMA planes. GUIs package or embed
+  that library/daemon, and the library direction stays portable to other front
+  ends — notably Android.
+- **Observation surface over introspect (`80bl`).** Mentci becomes the
+  interactive observation and debugging surface for component behavior by
+  querying the `introspect` component: schema-defined trace events flow into
+  introspect, and Mentci queries and filters that data by component type,
+  message type, and schema-derived Signal input/output shape.
+- **Deployed console (`mu0o`).** The Mentci stack moves from sandbox-only proof
+  toward an available deployed test surface — working with Mentci as the
+  component observation, debugging, approval, and integration console while
+  audits continue.
+- **Prompt-to-bead-weave routing (`xk7f`).** A Mentci-daemon-level direction: a
+  prompt enters Mentci, a cheap contained-API preflight model analyzes it and
+  emits fixed-schema NOTA that loads the right skills and builds a minimal
+  scaffold plus a `skills.nota` index, then Mentci opens a persistent named
+  addressable harness session through a `terminal-cell` driver. Harness
+  adapters are pluggable over one driver (Claude Code, Codex, pi, open-ended);
+  the `terminal-cell` driver owns process liveness and the send/read loop, while
+  `orchestrate` lanes own naming, addressing, and session lookup. The first
+  proof is a sandboxed jj task, never primary.
+
 ## What the crate IS now
 
 ```
