@@ -337,8 +337,8 @@ dependencies = [
 
 [[package]]
 name = "meta-signal-criome"
-version = "0.2.0"
-source = "git+https://github.com/LiGoldragon/meta-signal-criome?branch=main#507c56f570807ee1062a7e702b222b4c7691532e"
+version = "0.3.0"
+source = "git+https://github.com/LiGoldragon/meta-signal-criome?branch=criome-authorization-push#acd203e7e07191ff83dfedcafbc9ecb2da9f87ea"
 dependencies = [
  "nota",
  "rkyv",
@@ -394,7 +394,7 @@ dependencies = [
 [[package]]
 name = "nota"
 version = "0.5.1"
-source = "git+https://github.com/LiGoldragon/nota-next.git?branch=main#96e64bcdbe531eb33a900eb3abbc58a095e01f76"
+source = "git+https://github.com/LiGoldragon/nota-next.git?branch=main#bea7e2840ac2cf3e384f07b5c10eeb0890cead25"
 dependencies = [
  "nota-derive",
  "rkyv",
@@ -403,7 +403,7 @@ dependencies = [
 [[package]]
 name = "nota-derive"
 version = "0.3.0"
-source = "git+https://github.com/LiGoldragon/nota-next.git?branch=main#96e64bcdbe531eb33a900eb3abbc58a095e01f76"
+source = "git+https://github.com/LiGoldragon/nota-next.git?branch=main#bea7e2840ac2cf3e384f07b5c10eeb0890cead25"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -556,7 +556,7 @@ checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 [[package]]
 name = "schema"
 version = "0.2.0"
-source = "git+https://github.com/LiGoldragon/schema-next.git?branch=main#dea9b555d76a37f099db2477ead1c758a7517f37"
+source = "git+https://github.com/LiGoldragon/schema-next.git?branch=main#e4f7382cde7ef21d0c5047c633e25f0c418d2ed7"
 dependencies = [
  "blake3",
  "nota",
@@ -568,7 +568,7 @@ dependencies = [
 [[package]]
 name = "schema-cc"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/schema-next.git?branch=main#dea9b555d76a37f099db2477ead1c758a7517f37"
+source = "git+https://github.com/LiGoldragon/schema-next.git?branch=main#e4f7382cde7ef21d0c5047c633e25f0c418d2ed7"
 dependencies = [
  "nota",
  "prettyplease",
@@ -581,7 +581,7 @@ dependencies = [
 [[package]]
 name = "schema-rust"
 version = "0.5.3"
-source = "git+https://github.com/LiGoldragon/schema-rust-next.git?branch=main#abd31f48197c7e4db1da4b04a1c75cafd7276d3a"
+source = "git+https://github.com/LiGoldragon/schema-rust-next.git?branch=main#d0d2472c3cc602614f613788e9b1198d2307931a"
 dependencies = [
  "nota",
  "prettyplease",
@@ -631,8 +631,8 @@ checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
 
 [[package]]
 name = "signal-criome"
-version = "0.3.0"
-source = "git+https://github.com/LiGoldragon/signal-criome?branch=main#182036acc4e763b9ef6c763082f6c277785f86b3"
+version = "0.6.0"
+source = "git+https://github.com/LiGoldragon/signal-criome?branch=criome-authorization-push#2986f8f8ec83de14546cf8ce286738bc2aba77c9"
 dependencies = [
  "blake3",
  "blst",
@@ -645,8 +645,8 @@ dependencies = [
 
 [[package]]
 name = "signal-frame"
-version = "0.2.1"
-source = "git+https://github.com/LiGoldragon/signal-frame?branch=main#d0dd5c0b66a90c1af72d45920e31c2b3049437f9"
+version = "0.3.0"
+source = "git+https://github.com/LiGoldragon/signal-frame?branch=main#075b0d992dab071c5021842fb7fdfe0b98bfcd76"
 dependencies = [
  "nota",
  "paste",
@@ -658,7 +658,7 @@ dependencies = [
 [[package]]
 name = "signal-frame-macros"
 version = "0.1.1"
-source = "git+https://github.com/LiGoldragon/signal-frame?branch=main#d0dd5c0b66a90c1af72d45920e31c2b3049437f9"
+source = "git+https://github.com/LiGoldragon/signal-frame?branch=main#075b0d992dab071c5021842fb7fdfe0b98bfcd76"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -667,8 +667,8 @@ dependencies = [
 
 [[package]]
 name = "signal-mentci"
-version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal-mentci?branch=main#32f04f44901a9b59a73185213d54811d5d11f7c7"
+version = "0.2.0"
+source = "git+https://github.com/LiGoldragon/signal-mentci?branch=criome-authorization-push#e9ee46f99a6149dfc21b1e6fea400e1c2a460990"
 dependencies = [
  "nota",
  "rkyv",
@@ -816,7 +816,7 @@ dependencies = [
 [[package]]
 name = "triad-runtime"
 version = "0.6.1"
-source = "git+https://github.com/LiGoldragon/triad-runtime.git?branch=main#60e0ed7c753d35561458586ff7d870dcadf47ea5"
+source = "git+https://github.com/LiGoldragon/triad-runtime.git?branch=main#3d3207461bcbd39dd2505d0bb957b6fec30c98d9"
 dependencies = [
  "kameo",
  "rkyv",
