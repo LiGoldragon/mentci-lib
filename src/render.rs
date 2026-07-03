@@ -72,12 +72,12 @@ pub trait RenderNota {
 #[cfg(feature = "nota-text")]
 impl<Object> RenderNota for Object
 where
-    Object: nota_next::NotaEncode,
+    Object: nota::NotaEncode,
 {
     fn render_nota(&self, origin: RenderOrigin) -> RenderedObject {
         RenderedObject {
             origin,
-            body: nota_next::NotaEncode::to_nota(self),
+            body: nota::NotaEncode::to_nota(self),
         }
     }
 }

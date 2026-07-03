@@ -13,7 +13,7 @@ signal-frame       = { git = "https://github.com/LiGoldragon/signal-frame", bran
 meta-signal-mentci = { git = "https://github.com/LiGoldragon/meta-signal-mentci", branch = "main" }
 signal-criome      = { git = "https://github.com/LiGoldragon/signal-criome", branch = "main" }
 meta-signal-criome = { git = "https://github.com/LiGoldragon/meta-signal-criome", branch = "main" }
-nota-next          = { package = "nota", git = "https://github.com/LiGoldragon/nota-next.git", branch = "main", optional = true }
+nota          = { package = "nota", git = "https://github.com/LiGoldragon/nota.git", branch = "main", optional = true }
 thiserror          = "2"
 
 [features]
@@ -21,7 +21,7 @@ default     = []
 # NOTA projection of typed payloads (the render-typed-replies-and-unknown-
 # objects behavior). Pulls the optional NOTA codec through every contract.
 nota-text = [
-  "dep:nota-next",
+  "dep:nota",
   "signal-frame/nota-text",
   "signal-mentci/nota-text",
   "meta-signal-mentci/nota-text",
