@@ -8,11 +8,11 @@ repository   = "https://github.com/LiGoldragon/mentci-lib"
 description  = "mentci-lib — the client observability + control model for the mentci programmable-UI component. Owns the MVU-shaped ObservationModel keyed by component socket, the approval state machine over signal-mentci's vocabulary, the edits-as-proposals flow, the NOTA-fallback renderer, and the typed closed-decision -> criome verdict mapping."
 
 [dependencies]
-signal-mentci      = { git = "https://github.com/LiGoldragon/signal-mentci", branch = "main" }
-signal-frame       = { git = "https://github.com/LiGoldragon/signal-frame", branch = "main", default-features = false }
-meta-signal-mentci = { git = "https://github.com/LiGoldragon/meta-signal-mentci", branch = "main" }
-signal-criome      = { git = "https://github.com/LiGoldragon/signal-criome", branch = "main" }
-meta-signal-criome = { git = "https://github.com/LiGoldragon/meta-signal-criome", branch = "main" }
+signal-mentci      = { git = "https://github.com/LiGoldragon/signal-mentci", branch = "drop-next" }
+signal-frame       = { git = "https://github.com/LiGoldragon/signal-frame", branch = "drop-next", default-features = false }
+meta-signal-mentci = { git = "https://github.com/LiGoldragon/meta-signal-mentci", branch = "drop-next" }
+signal-criome      = { git = "https://github.com/LiGoldragon/signal-criome", branch = "drop-next" }
+meta-signal-criome = { git = "https://github.com/LiGoldragon/meta-signal-criome", branch = "drop-next" }
 nota          = { package = "nota", git = "https://github.com/LiGoldragon/nota.git", branch = "main", optional = true }
 thiserror          = "2"
 
