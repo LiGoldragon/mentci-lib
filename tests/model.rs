@@ -315,7 +315,9 @@ fn folded_full_projection_surfaces_daemon_panes_in_the_view() {
                 Vec::new(),
                 vec![PaneContent {
                     pane: PaneLabel::new("introspect"),
-                    body: signal_mentci::ContextBody::new("(PrototypeWitness (prototype None None None None))"),
+                    body: signal_mentci::ContextBody::new(
+                        "(PrototypeWitness (prototype None None None None))",
+                    ),
                 }],
                 CriomeAccess::ReadWrite,
             ),

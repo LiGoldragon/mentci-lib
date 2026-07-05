@@ -182,7 +182,7 @@ effect.
 itself to NOTA becomes a labeled `RenderedObject`. A thin client paints
 whatever purpose-built view it has and falls back to the typed object's
 NOTA projection for everything else — the same path agents use. With the
-`nota-text` feature this is the real `nota-next` projection; without it
+`nota-text` feature this is the real `nota` projection; without it
 the model still compiles and falls back to `Debug`.
 
 ## Stack discipline

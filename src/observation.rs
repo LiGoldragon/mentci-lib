@@ -16,9 +16,9 @@ use std::collections::BTreeMap;
 
 use meta_signal_mentci::ComponentSocketKind;
 use signal_mentci::{
-    CriomeAccess, InterfaceInterest, InterfaceProjection, InterfaceStateObservation,
-    MentciRequest, PaneContent, ProjectedInterfaceState, QuestionProposal, RevisionCounter,
-    SubscriberName, SubscriptionToken,
+    CriomeAccess, InterfaceInterest, InterfaceProjection, InterfaceStateObservation, MentciRequest,
+    PaneContent, ProjectedInterfaceState, QuestionProposal, RevisionCounter, SubscriberName,
+    SubscriptionToken,
 };
 
 use crate::approval::{ApprovalModel, ApprovalView};

@@ -9,7 +9,7 @@
 //!
 //! The renderer is content-agnostic: anything that knows how to project itself
 //! to NOTA can become a [`RenderedObject`]. With the `nota-text` feature this
-//! is the real `nota-next` projection; without it the model still compiles and
+//! is the real `nota` projection; without it the model still compiles and
 //! falls back to the `Debug` shape so the shared core builds with or without
 //! the codec.
 
