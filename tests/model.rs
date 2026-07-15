@@ -31,8 +31,8 @@ fn criome_question(identifier: &str, slot: &str) -> ApprovalQuestion {
 
 fn question_with_source(identifier: &str, source: ApprovalSource) -> ApprovalQuestion {
     ApprovalQuestion {
-        identifier: QuestionIdentifier::new(identifier),
-        proposal: QuestionProposal::new(
+        question_identifier: QuestionIdentifier::new(identifier),
+        question_proposal: QuestionProposal::new(
             source,
             PromptText::new("authorize the thing"),
             Some(AnswerText::new("approve")),
@@ -59,8 +59,8 @@ fn projected_with_panes(
     criome_access: CriomeAccess,
 ) -> ProjectedInterfaceState {
     ProjectedInterfaceState {
-        revision: RevisionCounter::new(7),
-        projection: InterfaceProjection::FullProjection(InterfaceState::new(
+        revision_counter: RevisionCounter::new(7),
+        interface_projection: InterfaceProjection::FullProjection(InterfaceState::new(
             RevisionCounter::new(7),
             StatusText::new("ready"),
             None,
@@ -99,8 +99,11 @@ fn opened_observation_folds_pending_into_the_approval_cursor() {
     model.on_engine_event(EngineEvent::ObservationOpened {
         socket: ComponentSocketKind::Mentci,
         opened: InterfaceObservationOpened {
-            token: SubscriptionToken::new("subscription-1"),
-            state: projected_with(vec![question("question-1"), question("question-2")]),
+            subscription_token: SubscriptionToken::new("subscription-1"),
+            projected_interface_state: projected_with(vec![
+                question("question-1"),
+                question("question-2"),
+            ]),
         },
     });
 
@@ -112,7 +115,7 @@ fn opened_observation_folds_pending_into_the_approval_cursor() {
     assert_eq!(approval.pending().len(), 2);
     // First pending question is auto-selected.
     assert_eq!(
-        approval.current().unwrap().identifier.as_str(),
+        approval.current().unwrap().question_identifier.as_str(),
         "question-1"
     );
 }
@@ -127,8 +130,8 @@ fn pushed_state_change_refolds_the_queue() {
     model.on_engine_event(EngineEvent::ObservationOpened {
         socket: ComponentSocketKind::Mentci,
         opened: InterfaceObservationOpened {
-            token: SubscriptionToken::new("subscription-1"),
-            state: projected_with(vec![question("question-1")]),
+            subscription_token: SubscriptionToken::new("subscription-1"),
+            projected_interface_state: projected_with(vec![question("question-1")]),
         },
     });
     model.on_engine_event(EngineEvent::InterfaceStateChanged {
@@ -157,15 +160,18 @@ fn answering_a_question_emits_a_verdict_and_drops_it_from_pending() {
     model.on_engine_event(EngineEvent::ObservationOpened {
         socket: ComponentSocketKind::Mentci,
         opened: InterfaceObservationOpened {
-            token: SubscriptionToken::new("subscription-1"),
-            state: projected_with(vec![question("question-1"), question("question-2")]),
+            subscription_token: SubscriptionToken::new("subscription-1"),
+            projected_interface_state: projected_with(vec![
+                question("question-1"),
+                question("question-2"),
+            ]),
         },
     });
 
     let verdict = ApprovalVerdict {
-        question: QuestionIdentifier::new("question-1"),
-        decision: ApprovalDecision::ApproveSuggestedAnswer,
-        answered_by: SubscriberName::new("test-client"),
+        question_identifier: QuestionIdentifier::new("question-1"),
+        approval_decision: ApprovalDecision::ApproveSuggestedAnswer,
+        subscriber_name: SubscriberName::new("test-client"),
     };
     let commands = model.on_user_event(UserEvent::AnswerQuestion { verdict });
     assert_eq!(commands.len(), 1);
@@ -192,15 +198,18 @@ fn answering_a_criome_question_sends_the_verdict_to_the_daemon() {
     model.on_engine_event(EngineEvent::ObservationOpened {
         socket: ComponentSocketKind::Mentci,
         opened: InterfaceObservationOpened {
-            token: SubscriptionToken::new("subscription-1"),
-            state: projected_with(vec![criome_question("question-1", "slot-1")]),
+            subscription_token: SubscriptionToken::new("subscription-1"),
+            projected_interface_state: projected_with(vec![criome_question(
+                "question-1",
+                "slot-1",
+            )]),
         },
     });
     let commands = model.on_user_event(UserEvent::AnswerQuestion {
         verdict: ApprovalVerdict {
-            question: QuestionIdentifier::new("question-1"),
-            decision: ApprovalDecision::ApproveSuggestedAnswer,
-            answered_by: SubscriberName::new("test-client"),
+            question_identifier: QuestionIdentifier::new("question-1"),
+            approval_decision: ApprovalDecision::ApproveSuggestedAnswer,
+            subscriber_name: SubscriberName::new("test-client"),
         },
     });
     assert_eq!(commands.len(), 1);
@@ -225,9 +234,9 @@ fn defer_keeps_the_question_pending() {
     );
     let _ = approval.absorb_pending(vec![question("question-1")]);
     let outcome = approval.answer(ApprovalVerdict {
-        question: QuestionIdentifier::new("question-1"),
-        decision: ApprovalDecision::Defer,
-        answered_by: SubscriberName::new("test-client"),
+        question_identifier: QuestionIdentifier::new("question-1"),
+        approval_decision: ApprovalDecision::Defer,
+        subscriber_name: SubscriberName::new("test-client"),
     });
     assert!(outcome.answered().is_none());
     assert_eq!(approval.pending().len(), 1);
@@ -275,9 +284,9 @@ fn closed_decision_maps_to_the_criome_verdict() {
 fn nota_fallback_renders_a_typed_reply() {
     use mentci_lib::{RenderNota, RenderOrigin};
     let presented = signal_mentci::QuestionPresented {
-        question: QuestionIdentifier::new("question-1"),
-        revision: RevisionCounter::new(1),
-        accepted_at: signal_mentci::TimestampNanos::new(0),
+        question_identifier: QuestionIdentifier::new("question-1"),
+        revision_counter: RevisionCounter::new(1),
+        timestamp_nanos: signal_mentci::TimestampNanos::new(0),
     };
     let rendered = presented.render_nota(RenderOrigin::Reply);
     assert_eq!(rendered.origin().label(), "reply");
@@ -310,12 +319,12 @@ fn folded_full_projection_surfaces_daemon_panes_in_the_view() {
     model.on_engine_event(EngineEvent::ObservationOpened {
         socket: ComponentSocketKind::Mentci,
         opened: InterfaceObservationOpened {
-            token: SubscriptionToken::new("subscription-1"),
-            state: projected_with_panes(
+            subscription_token: SubscriptionToken::new("subscription-1"),
+            projected_interface_state: projected_with_panes(
                 Vec::new(),
                 vec![PaneContent {
-                    pane: PaneLabel::new("introspect"),
-                    body: signal_mentci::ContextBody::new(
+                    pane_label: PaneLabel::new("introspect"),
+                    context_body: signal_mentci::ContextBody::new(
                         "(PrototypeWitness (prototype None None None None))",
                     ),
                 }],
@@ -326,8 +335,13 @@ fn folded_full_projection_surfaces_daemon_panes_in_the_view() {
 
     let view = model.view();
     assert_eq!(view.panes.len(), 1);
-    assert_eq!(view.panes[0].pane.as_str(), "introspect");
-    assert!(view.panes[0].body.as_str().contains("PrototypeWitness"));
+    assert_eq!(view.panes[0].pane_label.as_str(), "introspect");
+    assert!(
+        view.panes[0]
+            .context_body
+            .as_str()
+            .contains("PrototypeWitness")
+    );
 }
 
 #[test]
@@ -341,8 +355,11 @@ fn folded_full_projection_surfaces_criome_access_in_the_view() {
     model.on_engine_event(EngineEvent::ObservationOpened {
         socket: ComponentSocketKind::Mentci,
         opened: InterfaceObservationOpened {
-            token: SubscriptionToken::new("subscription-1"),
-            state: projected_with_access(vec![question("question-1")], CriomeAccess::ReadWrite),
+            subscription_token: SubscriptionToken::new("subscription-1"),
+            projected_interface_state: projected_with_access(
+                vec![question("question-1")],
+                CriomeAccess::ReadWrite,
+            ),
         },
     });
     assert_eq!(model.view().criome_access, Some(CriomeAccess::ReadWrite));

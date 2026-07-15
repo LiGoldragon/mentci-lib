@@ -1,6 +1,6 @@
 [package]
 name         = "mentci-lib"
-version      = "0.1.0"
+version      = "0.2.0"
 edition      = "2024"
 rust-version = "1.88"
 license      = "MIT OR Apache-2.0"
@@ -8,11 +8,11 @@ repository   = "https://github.com/LiGoldragon/mentci-lib"
 description  = "mentci-lib — the client observability + control model for the mentci programmable-UI component. Owns the MVU-shaped ObservationModel keyed by component socket, the approval state machine over signal-mentci's vocabulary, the edits-as-proposals flow, the NOTA-fallback renderer, and the typed closed-decision -> criome verdict mapping."
 
 [dependencies]
-signal-mentci      = { git = "https://github.com/LiGoldragon/signal-mentci", branch = "main" }
-signal-frame       = { git = "https://github.com/LiGoldragon/signal-frame", branch = "main", default-features = false }
-meta-signal-mentci = { git = "https://github.com/LiGoldragon/meta-signal-mentci", branch = "main" }
-signal-criome      = { git = "https://github.com/LiGoldragon/signal-criome", branch = "main" }
-meta-signal-criome = { git = "https://github.com/LiGoldragon/meta-signal-criome", branch = "main" }
+signal-mentci      = { git = "https://github.com/LiGoldragon/signal-mentci.git", branch = "main" }
+signal-frame       = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main", default-features = false }
+meta-signal-mentci = { git = "https://github.com/LiGoldragon/meta-signal-mentci.git", branch = "main" }
+signal-criome      = { git = "https://github.com/LiGoldragon/signal-criome.git", branch = "main" }
+meta-signal-criome = { git = "https://github.com/LiGoldragon/meta-signal-criome.git", branch = "main" }
 nota          = { package = "nota", git = "https://github.com/LiGoldragon/nota.git", branch = "main", optional = true }
 thiserror          = "2"
 

@@ -10,9 +10,9 @@ checksum = "76a2e8124351fda1ef8aaaa3bbd7ebbcb486bbcd4225aca0aa0d84bb2db8fecb"
 
 [[package]]
 name = "arrayvec"
-version = "0.7.7"
+version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f02882884d3e1bc524fb12c79f107f6ad0e1cfd498c536ffb494301740995dfe"
+checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
 
 [[package]]
 name = "bitflags"
@@ -77,15 +77,15 @@ dependencies = [
 
 [[package]]
 name = "bytes"
-version = "1.12.0"
+version = "1.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ae3f5d315924270530207e2a68396c3cc547f6dca3fbdca317cfb1a51edb593"
+checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 
 [[package]]
 name = "cc"
-version = "1.2.65"
+version = "1.2.67"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e228eec9be7c17ccb640b59b36a5cd805ea2a564a4c5e162c2f659fea30d3b96"
+checksum = "e17dd265a7d0f31ef544e1b20e03add05d3b45b491b633b10d67145d2acc1a38"
 dependencies = [
  "find-msvc-tools",
  "shlex",
@@ -270,9 +270,9 @@ dependencies = [
 
 [[package]]
 name = "js-sys"
-version = "0.3.102"
+version = "0.3.103"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03d04c30968dffe80775bd4d7fb676131cd04a1fb46d2686dbffbaec2d9dfd31"
+checksum = "53b44bfcdb3f8d5837a46dae1ca9660a837176eee74a28b229bc626816589102"
 dependencies = [
  "cfg-if",
  "futures-util",
@@ -318,13 +318,13 @@ checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
 
 [[package]]
 name = "memchr"
-version = "2.8.2"
+version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88904434abc2901f197fe8cc55f0445e7ded921dba5911dad2e2b39b48e663c4"
+checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 
 [[package]]
 name = "mentci-lib"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "meta-signal-criome",
  "meta-signal-mentci",
@@ -337,8 +337,8 @@ dependencies = [
 
 [[package]]
 name = "meta-signal-criome"
-version = "0.3.0"
-source = "git+https://github.com/LiGoldragon/meta-signal-criome?branch=main#37e4b427be02ce2a8145bf0ebbc2751d81a32861"
+version = "0.7.0"
+source = "git+https://github.com/LiGoldragon/meta-signal-criome.git?branch=main#b9cda54209b7f0b24c0b3f435965a233ce7406da"
 dependencies = [
  "nota",
  "rkyv",
@@ -350,8 +350,8 @@ dependencies = [
 
 [[package]]
 name = "meta-signal-mentci"
-version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/meta-signal-mentci?branch=main#009a198360d7c8f4327af1dac4353e91b11f7770"
+version = "0.2.0"
+source = "git+https://github.com/LiGoldragon/meta-signal-mentci.git?branch=main#25d1a97fbcb843160d0445edb91331233c16dff4"
 dependencies = [
  "nota",
  "rkyv",
@@ -362,9 +362,9 @@ dependencies = [
 
 [[package]]
 name = "mio"
-version = "1.2.1"
+version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02bd0af71c67b473010cbbc60715ee815645a4dc942899111f494b4b737d6fda"
+checksum = "30d65c71f1ce40ab09135ce117d742b9f8a19ff91a41a8b57ed50bc2de59c427"
 dependencies = [
  "libc",
  "wasi",
@@ -393,8 +393,8 @@ dependencies = [
 
 [[package]]
 name = "nota"
-version = "0.5.1"
-source = "git+https://github.com/LiGoldragon/nota.git?branch=main#bea7e2840ac2cf3e384f07b5c10eeb0890cead25"
+version = "0.7.0"
+source = "git+https://github.com/LiGoldragon/nota.git?branch=main#f8de7a516b769fc544c7f8c0030e258833c1cf9b"
 dependencies = [
  "nota-derive",
  "rkyv",
@@ -403,7 +403,7 @@ dependencies = [
 [[package]]
 name = "nota-derive"
 version = "0.3.0"
-source = "git+https://github.com/LiGoldragon/nota.git?branch=main#bea7e2840ac2cf3e384f07b5c10eeb0890cead25"
+source = "git+https://github.com/LiGoldragon/nota.git?branch=main#f8de7a516b769fc544c7f8c0030e258833c1cf9b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -479,36 +479,36 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.45"
+version = "1.0.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41f2619966050689382d2b44f664f4bc593e129785a36d6ee376ddf37259b924"
+checksum = "dfbc457d0c7a0759a614551b11a6409e5951f6c7537be1f1b7682b9ae9230368"
 dependencies = [
  "proc-macro2",
 ]
 
 [[package]]
 name = "rancor"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a063ea72381527c2a0561da9c80000ef822bdd7c3241b1cc1b12100e3df081ee"
+checksum = "daff8b7b3ccf5f7ba270b3e7a0a4d4c701c5797e38dec27c7e2c3dbb830fed1c"
 dependencies = [
  "ptr_meta",
 ]
 
 [[package]]
 name = "rend"
-version = "0.5.3"
+version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cadadef317c2f20755a64d7fdc48f9e7178ee6b0e1f7fce33fa60f1d68a276e6"
+checksum = "663ba70707f96e871406fe10d68128412e619b06d1d47cb91c3a4c6501176240"
 dependencies = [
  "bytecheck",
 ]
 
 [[package]]
 name = "rkyv"
-version = "0.8.16"
+version = "0.8.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73389e0c99e664f919275ab5b5b0471391fe9a8de61e1dff9b1eaf56a90f16e3"
+checksum = "815cc8a37159a463064825246cadb07961e25cd9885908606f6d08a98d8f8874"
 dependencies = [
  "bytecheck",
  "bytes",
@@ -525,9 +525,9 @@ dependencies = [
 
 [[package]]
 name = "rkyv_derive"
-version = "0.8.16"
+version = "0.8.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d2ed0b54125315fb36bd021e82d314d1c126548f871634b483f46b31d13cac6"
+checksum = "c0ed1a78a1b19d184b0daa629dd9a024573173ec7d485b287cb369fb3607cc1c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -549,45 +549,31 @@ dependencies = [
 
 [[package]]
 name = "rustversion"
-version = "1.0.22"
+version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
+checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
 
 [[package]]
-name = "schema"
+name = "schema-language"
 version = "0.2.0"
-source = "git+https://github.com/LiGoldragon/schema.git?branch=main#a393c8c822cea737d7ed8e823eae7d821ea19bf2"
+source = "git+https://github.com/LiGoldragon/schema-language.git?rev=59d59aca5767523a929e5bd6fcd011a4a4e8ff23#59d59aca5767523a929e5bd6fcd011a4a4e8ff23"
 dependencies = [
  "blake3",
  "nota",
  "rkyv",
- "schema-cc",
- "thiserror",
-]
-
-[[package]]
-name = "schema-cc"
-version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/schema.git?branch=main#a393c8c822cea737d7ed8e823eae7d821ea19bf2"
-dependencies = [
- "nota",
- "prettyplease",
- "proc-macro2",
- "quote",
- "syn",
  "thiserror",
 ]
 
 [[package]]
 name = "schema-rust"
-version = "0.5.3"
-source = "git+https://github.com/LiGoldragon/schema-rust.git?branch=main#72c71ffc558fee0d29c5b0517013de46e0307597"
+version = "0.8.0"
+source = "git+https://github.com/LiGoldragon/schema-rust.git?branch=main#87de872dbc4ee124a6a1133ff520b594063304f5"
 dependencies = [
  "nota",
  "prettyplease",
  "proc-macro2",
  "quote",
- "schema",
+ "schema-language",
  "syn",
  "thiserror",
  "triad-runtime",
@@ -631,8 +617,8 @@ checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
 
 [[package]]
 name = "signal-criome"
-version = "0.6.0"
-source = "git+https://github.com/LiGoldragon/signal-criome?branch=main#b4bfeecef41a05a6a93b7909976ab5312a17fa46"
+version = "0.12.0"
+source = "git+https://github.com/LiGoldragon/signal-criome.git?branch=main#71681d76cad7b9bbafd220cf51bd6525c0773e77"
 dependencies = [
  "blake3",
  "blst",
@@ -646,7 +632,7 @@ dependencies = [
 [[package]]
 name = "signal-frame"
 version = "0.3.0"
-source = "git+https://github.com/LiGoldragon/signal-frame?branch=main#44d22a07e75e6d2ff13581a5bb84d47c6ef35e97"
+source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#fd7909d1497b7bb18751521387a1087cd9e7c91c"
 dependencies = [
  "nota",
  "paste",
@@ -658,7 +644,7 @@ dependencies = [
 [[package]]
 name = "signal-frame-macros"
 version = "0.1.1"
-source = "git+https://github.com/LiGoldragon/signal-frame?branch=main#44d22a07e75e6d2ff13581a5bb84d47c6ef35e97"
+source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#fd7909d1497b7bb18751521387a1087cd9e7c91c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -667,8 +653,8 @@ dependencies = [
 
 [[package]]
 name = "signal-mentci"
-version = "0.2.0"
-source = "git+https://github.com/LiGoldragon/signal-mentci?branch=main#a1792c99ea5cb8f25bf547a7b26a5a1b0b669f53"
+version = "0.3.0"
+source = "git+https://github.com/LiGoldragon/signal-mentci.git?branch=main#77540cfb0f63a57cda33c2c6bbea8c2e19ad5330"
 dependencies = [
  "nota",
  "rkyv",
@@ -692,9 +678,9 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 
 [[package]]
 name = "socket2"
-version = "0.6.4"
+version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52d1cfed4120b4d927bf7c0f86d2087a4a7d6027c906d9f9d525a80573b9be51"
+checksum = "c3d1e2c7f27f8d4cb10542a02c49005dbd6e93095799d6f3be745fae9f8fedd4"
 dependencies = [
  "libc",
  "windows-sys",
@@ -702,9 +688,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.118"
+version = "2.0.119"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b9ae57f904213ebb649ce6895b8a66c66f0203b9319718f69a5612a065b1422"
+checksum = "872831b642d1a07999a962a351ed35b955ea2cfc8f3862091e2a240a84f17297"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -742,9 +728,9 @@ dependencies = [
 
 [[package]]
 name = "tinyvec"
-version = "1.11.0"
+version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e61e67053d25a4e82c844e8424039d9745781b3fc4f32b8d55ed50f5f667ef3"
+checksum = "bb4ebadaa0af04fab11ae01eb5f9fdb5f9c5b875506e210e71c07873528baa7f"
 dependencies = [
  "tinyvec_macros",
 ]
@@ -815,8 +801,8 @@ dependencies = [
 
 [[package]]
 name = "triad-runtime"
-version = "0.6.1"
-source = "git+https://github.com/LiGoldragon/triad-runtime.git?branch=main#f9a6a7c8ab50dbd5b5a8ef7bfd7ea8c9acb713e1"
+version = "0.7.0"
+source = "git+https://github.com/LiGoldragon/triad-runtime.git?branch=main#d323f9024f8490961c687798cf2dad4aea54aa7e"
 dependencies = [
  "kameo",
  "rkyv",
@@ -834,9 +820,9 @@ checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
 
 [[package]]
 name = "uuid"
-version = "1.23.3"
+version = "1.23.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "144d6b123cef80b301b8f72a9e2ca4370ddec21950d0a103dd22c437006d2db7"
+checksum = "ea5fab0d6c3c01ae70085a09cb03d4c7a1d6314e2b3e075392783396d724ca0a"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
@@ -850,9 +836,9 @@ checksum = "ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b"
 
 [[package]]
 name = "wasm-bindgen"
-version = "0.2.125"
+version = "0.2.126"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ddb3f79143bced6de84270411622a2699cee572fc0875aeaf1e7867cf9fca1a"
+checksum = "4b067c0c11094aef6b7a801c1e34a26affafdf3d051dba08456b868789aaf9a4"
 dependencies = [
  "cfg-if",
  "once_cell",
@@ -863,9 +849,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-macro"
-version = "0.2.125"
+version = "0.2.126"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e21a184b13fb19e157296e2c46056aec9092264fab83e4ba59e68c61b323c3d"
+checksum = "167ce5e579f6bcf889c4f7175a8a5a585de84e8ff93976ce393efa5f2837aab1"
 dependencies = [
  "quote",
  "wasm-bindgen-macro-support",
@@ -873,9 +859,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-macro-support"
-version = "0.2.125"
+version = "0.2.126"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fecefd9c35bd935a20fc3fc344b5f29138961e4f47fb03297d88f2587afb5ebd"
+checksum = "f3997c7839262f4ef12cf90b818d6340c18e80f263f1a94bf157d0ec4420380e"
 dependencies = [
  "bumpalo",
  "proc-macro2",
@@ -886,9 +872,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-shared"
-version = "0.2.125"
+version = "0.2.126"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23939e44bb9a5d7576fa2b563dc2e136628f1224e88a8deed09e04858b77871f"
+checksum = "dc1b4cb0cc549fcf58d7dfc081778139b3d283a081644e833e84682ad71cea24"
 dependencies = [
  "unicode-ident",
 ]

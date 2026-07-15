@@ -67,7 +67,9 @@ impl SocketObservation {
 
     /// The revision counter of the latest folded state, if any.
     pub fn revision(&self) -> Option<RevisionCounter> {
-        self.latest.as_ref().map(|state| state.revision.clone())
+        self.latest
+            .as_ref()
+            .map(|state| state.revision_counter.clone())
     }
 }
 
@@ -150,8 +152,8 @@ impl ObservationModel {
                 vec![Cmd::send(
                     socket,
                     MentciRequest::ObserveInterfaceState(InterfaceStateObservation {
-                        subscriber: self.subscriber.clone(),
-                        interest,
+                        subscriber_name: self.subscriber.clone(),
+                        interface_interest: interest,
                     }),
                 )]
             }
@@ -202,9 +204,9 @@ impl ObservationModel {
         match event {
             EngineEvent::ObservationOpened { socket, opened } => {
                 let slot = self.slot_mut(socket);
-                slot.token = Some(opened.token);
+                slot.token = Some(opened.subscription_token);
                 slot.liveness = SocketLiveness::Connected;
-                self.fold_projection(socket, opened.state);
+                self.fold_projection(socket, opened.projected_interface_state);
                 Vec::new()
             }
             EngineEvent::InterfaceStateChanged {
@@ -281,7 +283,7 @@ impl ObservationModel {
     }
 
     fn panes_from_projection(state: &ProjectedInterfaceState) -> Vec<PaneContent> {
-        match &state.projection {
+        match &state.interface_projection {
             InterfaceProjection::FullProjection(state) => state.panes().to_vec(),
             InterfaceProjection::StatusProjection(_)
             | InterfaceProjection::NotificationProjection(_)

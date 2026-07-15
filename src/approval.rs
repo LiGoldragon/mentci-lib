@@ -230,7 +230,7 @@ impl ApprovalModel {
             self.selected = self
                 .pending
                 .first()
-                .map(|question| question.identifier.clone());
+                .map(|question| question.question_identifier.clone());
         }
         self.deliveries_for(ApprovalUpdate::Snapshot(self.view()))
     }
@@ -238,7 +238,7 @@ impl ApprovalModel {
     /// Register a newly-arrived question locally (used when a single question
     /// push arrives rather than a whole projection).
     pub fn receive(&mut self, question: ApprovalQuestion) -> Vec<ApprovalDelivery> {
-        let identifier = question.identifier.clone();
+        let identifier = question.question_identifier.clone();
         let received = question.clone();
         self.pending.push(question);
         if self.selected.is_none() {
@@ -261,8 +261,8 @@ impl ApprovalModel {
     /// question pending and only moves the cursor; a binding verdict removes
     /// the question and logs the verdict, advancing the cursor.
     pub fn answer(&mut self, verdict: ApprovalVerdict) -> ApprovalAnswerOutcome {
-        if matches!(verdict.decision, ApprovalDecision::Defer) {
-            let deliveries = self.select(verdict.question.clone());
+        if matches!(verdict.approval_decision, ApprovalDecision::Defer) {
+            let deliveries = self.select(verdict.question_identifier.clone());
             return ApprovalAnswerOutcome {
                 answered: None,
                 verdict: Some(verdict),
@@ -272,7 +272,7 @@ impl ApprovalModel {
         let Some(index) = self
             .pending
             .iter()
-            .position(|question| question.identifier == verdict.question)
+            .position(|question| question.question_identifier == verdict.question_identifier)
         else {
             return ApprovalAnswerOutcome {
                 answered: None,
@@ -286,7 +286,7 @@ impl ApprovalModel {
             .pending
             .get(index)
             .or_else(|| self.pending.last())
-            .map(|next| next.identifier.clone());
+            .map(|next| next.question_identifier.clone());
         let deliveries = self.deliveries_for(ApprovalUpdate::QuestionAnswered(verdict.clone()));
         ApprovalAnswerOutcome {
             answered: Some(answered),
@@ -305,9 +305,9 @@ impl ApprovalModel {
     ) -> Option<ApprovalVerdict> {
         let question = self.selected.clone()?;
         Some(ApprovalVerdict {
-            question,
-            decision,
-            answered_by,
+            question_identifier: question,
+            approval_decision: decision,
+            subscriber_name: answered_by,
         })
     }
 
@@ -321,9 +321,9 @@ impl ApprovalModel {
     ) -> Option<AnswerProposal> {
         let question = self.selected.clone()?;
         Some(AnswerProposal {
-            question,
-            body,
-            authored_by,
+            question_identifier: question,
+            answer_text: body,
+            subscriber_name: authored_by,
         })
     }
 
@@ -361,7 +361,7 @@ impl ApprovalModel {
         let selected = self.selected.as_ref()?;
         self.pending
             .iter()
-            .find(|question| &question.identifier == selected)
+            .find(|question| &question.question_identifier == selected)
     }
 
     pub fn pending(&self) -> &[ApprovalQuestion] {
@@ -388,7 +388,7 @@ impl ApprovalModel {
     fn is_pending(&self, identifier: &QuestionIdentifier) -> bool {
         self.pending
             .iter()
-            .any(|question| &question.identifier == identifier)
+            .any(|question| &question.question_identifier == identifier)
     }
 
     fn deliveries_for(&self, update: ApprovalUpdate) -> Vec<ApprovalDelivery> {
