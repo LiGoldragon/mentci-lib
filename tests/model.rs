@@ -279,16 +279,16 @@ fn closed_decision_maps_to_the_criome_verdict() {
     assert_eq!(defer.decision(), AuthorizationApprovalDecision::Defer);
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn nota_fallback_renders_a_typed_reply() {
-    use mentci_lib::{RenderNota, RenderOrigin};
+fn dotos_fallback_renders_a_typed_reply() {
+    use mentci_lib::{RenderDotos, RenderOrigin};
     let presented = signal_mentci::QuestionPresented {
         question_identifier: QuestionIdentifier::new("question-1"),
         revision_counter: RevisionCounter::new(1),
         timestamp_nanos: signal_mentci::TimestampNanos::new(0),
     };
-    let rendered = presented.render_nota(RenderOrigin::Reply);
+    let rendered = presented.render_dotos(RenderOrigin::Reply);
     assert_eq!(rendered.origin().label(), "reply");
     assert!(rendered.body().contains("question-1"));
 }

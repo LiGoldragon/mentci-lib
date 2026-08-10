@@ -30,7 +30,7 @@ daemon-owned programmable UI surface: state changes in the daemon, and every UI
 client paints daemon state. The daemon owns persistence, sockets, the criome
 bridge, the key-unlock flow, and long-lived runtime lifecycle. `mentci-lib`
 owns only the client-side mirrored model, the local approval cursor, the
-NOTA-fallback renderer, and the side-effect descriptions clients dispatch to
+DOTOS-fallback renderer, and the side-effect descriptions clients dispatch to
 the daemon.
 
 Constraints (review and test seeds):
@@ -53,7 +53,7 @@ Any "sema" reference here is today's `sema` storage kernel; any "criome"
 reference is today's `criome` daemon. The eventual `Sema` / `Criome` are
 broader; `mentci-lib` is a realization step on today's stack, re-founded on the
 live contracts. The MVU `ObservationModel`, the approval state machine, the
-NOTA-fallback renderer, and the closed-decision -> criome verdict mapping are
+DOTOS-fallback renderer, and the closed-decision -> criome verdict mapping are
 implemented and green, with mentci-egui and the mentci CLI consuming the model.
 Clients submit `AnswerQuestion` to the mentci daemon; the daemon owns any
 criome verdict side effect.
@@ -80,8 +80,8 @@ document.
   audits continue.
 - **Prompt-to-bead-weave routing (`xk7f`).** A Mentci-daemon-level direction: a
   prompt enters Mentci, a cheap contained-API preflight model analyzes it and
-  emits fixed-schema NOTA that loads the right skills and builds a minimal
-  scaffold plus a `skills.nota` index, then Mentci opens a persistent named
+  emits fixed-schema DOTOS that loads the right skills and builds a minimal
+  scaffold plus a `skills.dotos` index, then Mentci opens a persistent named
   addressable harness session through a `terminal-cell` driver. Harness
   adapters are pluggable over one driver (Claude Code, Codex, pi, open-ended);
   the `terminal-cell` driver owns process liveness and the send/read loop, while
@@ -105,8 +105,8 @@ document.
             │    + local subscription fan-out           │
             │    + edits-as-proposals                   │
             │                                           │
-            │  render::RenderNota                       │
-            │    NOTA-fallback for typed replies/objects│
+            │  render::RenderDotos                      │
+            │    DOTOS-fallback for typed replies/objects│
             │                                           │
             │  decision::CriomeVerdict                  │
             │    typed ApprovalDecision -> criome       │
@@ -176,13 +176,13 @@ This is the named contact point where the two enums meet
 but producing and submitting criome verdicts is not a client-library side
 effect.
 
-## NOTA-fallback rendering (xlrk)
+## DOTOS-fallback rendering (xlrk)
 
-`render::RenderNota` is a blanket affordance: any object that projects
-itself to NOTA becomes a labeled `RenderedObject`. A thin client paints
+`render::RenderDotos` is a blanket affordance: any object that projects
+itself to DOTOS becomes a labeled `RenderedObject`. A thin client paints
 whatever purpose-built view it has and falls back to the typed object's
-NOTA projection for everything else — the same path agents use. With the
-`nota-text` feature this is the real `nota` projection; without it
+DOTOS projection for everything else — the same path agents use. With the
+`dotos-text` feature this is the real `dotos` projection; without it
 the model still compiles and falls back to `Debug`.
 
 ## Stack discipline
@@ -195,7 +195,7 @@ attaches to them. Per `~/primary/skills/rust-discipline.md`.
 ## Adoption
 
 - **mentci CLI and mentci-egui** consume `ObservationModel` +
-  `RenderNota` today: each shell
+  `RenderDotos` today: each shell
   holds the model, feeds typed replies in as `EngineEvent`s, and renders
   every reply through the shared renderer. The shell owns no approval
   logic or per-socket state of its own.

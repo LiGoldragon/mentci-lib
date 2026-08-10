@@ -9,7 +9,7 @@ use other GUI libraries. **All of them — and the daemon itself — share
 this model**, so canonical daemon state and painted client state cannot
 drift. It carries the MVU `ObservationModel` keyed by component socket,
 the approval state machine over `signal-mentci`'s vocabulary, the
-edits-as-proposals flow, the NOTA-fallback renderer, and the
+edits-as-proposals flow, the DOTOS-fallback renderer, and the
 closed-decision -> criome verdict mapping. Each shell is thin: it renders
 the data this model produces and forwards events back.
 

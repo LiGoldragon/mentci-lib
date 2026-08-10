@@ -1,15 +1,15 @@
-//! NOTA-fallback rendering (the `xlrk` render-typed-replies-and-unknown-objects
+//! DOTOS-fallback rendering (the `xlrk` render-typed-replies-and-unknown-objects
 //! behavior).
 //!
 //! A thin client paints whatever purpose-built view it has, and falls back to
-//! the typed object's NOTA projection for everything it does not yet
+//! the typed object's DOTOS projection for everything it does not yet
 //! special-case. mentci-egui currently does exactly this by hand for every
 //! reply; re-founded here it is a shared affordance so every client (and the
 //! daemon's own introspection surface) renders the same way.
 //!
 //! The renderer is content-agnostic: anything that knows how to project itself
-//! to NOTA can become a [`RenderedObject`]. With the `nota-text` feature this
-//! is the real `nota` projection; without it the model still compiles and
+//! to DOTOS can become a [`RenderedObject`]. With the `dotos-text` feature this
+//! is the real `dotos` projection; without it the model still compiles and
 //! falls back to the `Debug` shape so the shared core builds with or without
 //! the codec.
 
@@ -38,7 +38,7 @@ impl RenderOrigin {
     }
 }
 
-/// One rendered object: the origin that labels it plus its NOTA body. This is
+/// One rendered object: the origin that labels it plus its DOTOS body. This is
 /// the unit a shell drops into a scrollable transcript when it has no
 /// purpose-built view for the object.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -61,33 +61,33 @@ impl RenderedObject {
     }
 }
 
-/// Project a typed object to a [`RenderedObject`] as NOTA. Implemented for
+/// Project a typed object to a [`RenderedObject`] as DOTOS. Implemented for
 /// every contract type through the blanket impl below; a client calls
-/// `reply.render_nota(RenderOrigin::Reply)` on any reply, event, or unknown
+/// `reply.render_dotos(RenderOrigin::Reply)` on any reply, event, or unknown
 /// object and gets a uniformly-rendered block back.
-pub trait RenderNota {
-    fn render_nota(&self, origin: RenderOrigin) -> RenderedObject;
+pub trait RenderDotos {
+    fn render_dotos(&self, origin: RenderOrigin) -> RenderedObject;
 }
 
-#[cfg(feature = "nota-text")]
-impl<Object> RenderNota for Object
+#[cfg(feature = "dotos-text")]
+impl<Object> RenderDotos for Object
 where
-    Object: nota::NotaEncode,
+    Object: dotos::DotosEncode,
 {
-    fn render_nota(&self, origin: RenderOrigin) -> RenderedObject {
+    fn render_dotos(&self, origin: RenderOrigin) -> RenderedObject {
         RenderedObject {
             origin,
-            body: nota::NotaEncode::to_nota(self),
+            body: dotos::DotosEncode::to_dotos(self),
         }
     }
 }
 
-#[cfg(not(feature = "nota-text"))]
-impl<Object> RenderNota for Object
+#[cfg(not(feature = "dotos-text"))]
+impl<Object> RenderDotos for Object
 where
     Object: core::fmt::Debug,
 {
-    fn render_nota(&self, origin: RenderOrigin) -> RenderedObject {
+    fn render_dotos(&self, origin: RenderOrigin) -> RenderedObject {
         RenderedObject {
             origin,
             body: format!("{self:?}"),

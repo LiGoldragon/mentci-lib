@@ -1,32 +1,32 @@
 [package]
 name         = "mentci-lib"
-version      = "0.2.0"
+version      = "0.3.0"
 edition      = "2024"
-rust-version = "1.88"
+rust-version = "1.89"
 license      = "MIT OR Apache-2.0"
 repository   = "https://github.com/LiGoldragon/mentci-lib"
-description  = "mentci-lib — the client observability + control model for the mentci programmable-UI component. Owns the MVU-shaped ObservationModel keyed by component socket, the approval state machine over signal-mentci's vocabulary, the edits-as-proposals flow, the NOTA-fallback renderer, and the typed closed-decision -> criome verdict mapping."
+description  = "mentci-lib — the client observability + control model for the mentci programmable-UI component. Owns the MVU-shaped ObservationModel keyed by component socket, the approval state machine over signal-mentci's vocabulary, the edits-as-proposals flow, the DOTOS-fallback renderer, and the typed closed-decision -> criome verdict mapping."
 
 [dependencies]
-signal-mentci      = { git = "https://github.com/LiGoldragon/signal-mentci.git", branch = "main" }
-signal-frame       = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main", default-features = false }
-meta-signal-mentci = { git = "https://github.com/LiGoldragon/meta-signal-mentci.git", branch = "main" }
-signal-criome      = { git = "https://github.com/LiGoldragon/signal-criome.git", branch = "main" }
-meta-signal-criome = { git = "https://github.com/LiGoldragon/meta-signal-criome.git", branch = "main" }
-nota          = { package = "nota", git = "https://github.com/LiGoldragon/nota.git", branch = "main", optional = true }
+signal-mentci      = { git = "https://github.com/LiGoldragon/signal-mentci.git", rev = "bf105eac59caa43ca25f7ca263bdc7d2b9080d94" }
+signal-frame       = { git = "https://github.com/LiGoldragon/signal-frame.git", rev = "80f70d929ae6d72707052f097be2264872913983", default-features = false }
+meta-signal-mentci = { git = "https://github.com/LiGoldragon/meta-signal-mentci.git", rev = "cb93443d3d50716314c98e5d2d6ca4b5bd5dceba" }
+signal-criome      = { git = "https://github.com/LiGoldragon/signal-criome.git", rev = "b85fe3408faa24b8439a3685396430a68bfbcb71" }
+meta-signal-criome = { git = "https://github.com/LiGoldragon/meta-signal-criome.git", rev = "1c3bd8784142c54856e031d74b897382204cec21" }
+dotos         = { package = "dotos", git = "https://github.com/LiGoldragon/dotos.git", rev = "b3c2c76fe7a18ba026ab054d1fa7162e55860b9e", optional = true }
 thiserror          = "2"
 
 [features]
 default     = []
-# NOTA projection of typed payloads (the render-typed-replies-and-unknown-
-# objects behavior). Pulls the optional NOTA codec through every contract.
-nota-text = [
-  "dep:nota",
-  "signal-frame/nota-text",
-  "signal-mentci/nota-text",
-  "meta-signal-mentci/nota-text",
-  "signal-criome/nota-text",
-  "meta-signal-criome/nota-text",
+# DOTOS projection of typed payloads (the render-typed-replies-and-unknown-
+# objects behavior). Pulls the optional DOTOS codec through every contract.
+dotos-text = [
+  "dep:dotos",
+  "signal-frame/dotos-text",
+  "signal-mentci/dotos-text",
+  "meta-signal-mentci/dotos-text",
+  "signal-criome/dotos-text",
+  "meta-signal-criome/dotos-text",
 ]
 
 [lints.rust]
