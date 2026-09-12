@@ -149,7 +149,7 @@ dependencies = [
 [[package]]
 name = "meta-signal-criome"
 version = "1.0.0"
-source = "git+https://github.com/LiGoldragon/meta-signal-criome?rev=3393501c0e414516867dd31c20f664bd82abffc7#3393501c0e414516867dd31c20f664bd82abffc7"
+source = "git+https://github.com/LiGoldragon/meta-signal-criome?rev=8a150125abac2852336a439ce0f245f6432a3cfc#8a150125abac2852336a439ce0f245f6432a3cfc"
 dependencies = [
  "datom-codec",
  "ethos-zero",
@@ -337,7 +337,7 @@ dependencies = [
 [[package]]
 name = "signal-mentci"
 version = "1.0.0"
-source = "git+https://github.com/LiGoldragon/signal-mentci?rev=0bb230511a145dd44efb775a0e1958462853bf12#0bb230511a145dd44efb775a0e1958462853bf12"
+source = "git+https://github.com/LiGoldragon/signal-mentci?rev=ba63ccfb34bb8d80d82c4426eea489b71e72eea0#ba63ccfb34bb8d80d82c4426eea489b71e72eea0"
 dependencies = [
  "datom-codec",
  "ethos-zero",

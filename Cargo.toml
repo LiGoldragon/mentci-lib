@@ -8,10 +8,10 @@ repository   = "https://github.com/LiGoldragon/mentci-lib"
 description  = "mentci-lib — the client observability + control model for the mentci programmable-UI component. Owns the MVU-shaped ObservationModel keyed by component socket, the approval state machine over signal-mentci's vocabulary, the edits-as-proposals flow, the Datom-fallback renderer, and the typed closed-decision -> criome verdict mapping."
 
 [dependencies]
-signal-mentci      = { git = "https://github.com/LiGoldragon/signal-mentci", rev = "0bb230511a145dd44efb775a0e1958462853bf12" }
+signal-mentci      = { git = "https://github.com/LiGoldragon/signal-mentci", rev = "ba63ccfb34bb8d80d82c4426eea489b71e72eea0" }
 meta-signal-mentci = { git = "https://github.com/LiGoldragon/meta-signal-mentci", rev = "f491134e6b7b0ae5ddab6be978178a9d6d29198c" }
 signal-criome      = { git = "https://github.com/LiGoldragon/signal-criome", rev = "5bfa61b59503a26622dea6c73f3131a0a30d4dba" }
-meta-signal-criome = { git = "https://github.com/LiGoldragon/meta-signal-criome", rev = "3393501c0e414516867dd31c20f664bd82abffc7" }
+meta-signal-criome = { git = "https://github.com/LiGoldragon/meta-signal-criome", rev = "8a150125abac2852336a439ce0f245f6432a3cfc" }
 datom-codec        = { git = "https://github.com/LiGoldragon/datom-codec", rev = "6dccc76b75918a91d3370a9d4fe88aa7dd567876", optional = true }
 protos             = { git = "https://github.com/LiGoldragon/protos", rev = "171b21f65337983ab624b7b906397a4f1f92c5a3", optional = true }
 thiserror          = "2"
