@@ -33,13 +33,13 @@
         checks = {
           build = craneLib.cargoBuild (commonArgs // { inherit cargoArtifacts; });
           test = craneLib.cargoTest (commonArgs // { inherit cargoArtifacts; });
-          test-contract = craneLib.cargoTest (commonArgs // {
+          test-model = craneLib.cargoTest (commonArgs // {
             inherit cargoArtifacts;
-            cargoTestExtraArgs = "--test contract";
+            cargoTestExtraArgs = "--test model";
           });
           test-datom = craneLib.cargoTest (commonArgs // {
             inherit cargoArtifacts;
-            cargoTestExtraArgs = "--all-features --test contract";
+            cargoTestExtraArgs = "--all-features --test model";
           });
           test-doc = craneLib.cargoTest (commonArgs // {
             inherit cargoArtifacts;
