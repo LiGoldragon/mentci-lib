@@ -221,6 +221,18 @@ dependencies = [
 
 [[package]]
 name = "core-nomos"
+version = "0.41.0"
+source = "git+https://github.com/LiGoldragon/core-nomos.git?rev=ff675b264e3650afb88291036ec2bdd97292a2e7#ff675b264e3650afb88291036ec2bdd97292a2e7"
+dependencies = [
+ "content-identity 0.5.0",
+ "core-ethos 0.29.0",
+ "core-logos 0.26.0",
+ "signal-sema-translator 0.4.0",
+ "thiserror",
+]
+
+[[package]]
+name = "core-nomos"
 version = "0.41.1"
 source = "git+https://github.com/LiGoldragon/core-nomos.git?rev=7b60721d199551b648d42a49934a2f0ef950c595#7b60721d199551b648d42a49934a2f0ef950c595"
 dependencies = [
@@ -373,7 +385,7 @@ checksum = "3eaf3ede3fee6db1a4c2ee091bf8a8b4dccdc6d17f656fb07896ee72867612f2"
 
 [[package]]
 name = "mentci-lib"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "dotos 0.10.1",
  "meta-signal-criome",
@@ -386,15 +398,15 @@ dependencies = [
 
 [[package]]
 name = "meta-signal-criome"
-version = "0.8.0"
-source = "git+https://github.com/LiGoldragon/meta-signal-criome.git?rev=1c3bd8784142c54856e031d74b897382204cec21#1c3bd8784142c54856e031d74b897382204cec21"
+version = "0.8.1"
+source = "git+https://github.com/LiGoldragon/meta-signal-criome.git?rev=5acfedafd63964da1a4d1082245f3943c6d371b5#5acfedafd63964da1a4d1082245f3943c6d371b5"
 dependencies = [
  "core-ethos 0.29.0",
  "dotos 0.10.1",
  "name-table 0.3.0",
  "rkyv",
  "rust-logos 0.30.0",
- "schema-rust 0.17.0",
+ "schema-rust 0.15.0",
  "sema-translator 0.7.0",
  "signal-criome",
  "signal-frame 0.3.2",
@@ -405,15 +417,15 @@ dependencies = [
 
 [[package]]
 name = "meta-signal-mentci"
-version = "0.3.1"
-source = "git+https://github.com/LiGoldragon/meta-signal-mentci.git?rev=cb93443d3d50716314c98e5d2d6ca4b5bd5dceba#cb93443d3d50716314c98e5d2d6ca4b5bd5dceba"
+version = "0.3.2"
+source = "git+https://github.com/LiGoldragon/meta-signal-mentci.git?rev=b063a33d93fbe86e7423edcc4897f534047fb1a9#b063a33d93fbe86e7423edcc4897f534047fb1a9"
 dependencies = [
  "core-ethos 0.29.1",
- "dotos 0.10.1",
+ "dotos 0.10.0",
  "name-table 0.3.0",
  "rkyv",
  "rust-logos 0.30.1",
- "schema-rust 0.17.0",
+ "schema-rust 0.15.1",
  "sema-translator 0.8.0",
  "signal-frame 0.3.2",
  "signal-sema-translator 0.4.1",
@@ -701,6 +713,18 @@ checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
 
 [[package]]
 name = "schema-rust"
+version = "0.15.0"
+source = "git+https://github.com/LiGoldragon/schema-rust.git?rev=9e36587c85bd69357e9042729ba2df0052799756#9e36587c85bd69357e9042729ba2df0052799756"
+dependencies = [
+ "core-ethos 0.29.0",
+ "core-nomos 0.41.0",
+ "rust-logos 0.30.0",
+ "sema-translator 0.7.0",
+ "thiserror",
+]
+
+[[package]]
+name = "schema-rust"
 version = "0.15.1"
 source = "git+https://github.com/LiGoldragon/schema-rust.git?rev=664335240a40728826cfaa09e3100cd867031912#664335240a40728826cfaa09e3100cd867031912"
 dependencies = [
@@ -846,15 +870,15 @@ dependencies = [
 
 [[package]]
 name = "signal-mentci"
-version = "0.4.1"
-source = "git+https://github.com/LiGoldragon/signal-mentci.git?rev=bf105eac59caa43ca25f7ca263bdc7d2b9080d94#bf105eac59caa43ca25f7ca263bdc7d2b9080d94"
+version = "0.4.2"
+source = "git+https://github.com/LiGoldragon/signal-mentci.git?rev=293ea752ae1acb56f7977bcee4032fb714b150e7#293ea752ae1acb56f7977bcee4032fb714b150e7"
 dependencies = [
  "core-ethos 0.29.1",
  "dotos 0.10.1",
  "name-table 0.3.0",
  "rkyv",
  "rust-logos 0.30.1",
- "schema-rust 0.17.0",
+ "schema-rust 0.15.1",
  "sema-translator 0.8.0",
  "signal-criome",
  "signal-frame 0.3.2",
