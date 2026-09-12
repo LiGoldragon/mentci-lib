@@ -67,9 +67,7 @@ impl SocketObservation {
 
     /// The revision counter of the latest folded state, if any.
     pub fn revision(&self) -> Option<RevisionCounter> {
-        self.latest
-            .as_ref()
-            .map(|state| state.revision_counter)
+        self.latest.as_ref().map(|state| state.revision_counter)
     }
 }
 
