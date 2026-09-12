@@ -10,15 +10,15 @@
 //! The contract is `update(state, event) -> (state, Vec<Cmd>)` and
 //! `view(state) -> ObservationView`, exactly the original MVU shape — but every
 //! payload is a live `signal-mentci` type and the side-effects carry
-//! `MentciRequest`s, not the dead graph-signal frames.
+//! `MentciQuery`s, not the dead graph-signal frames.
 
 use std::collections::BTreeMap;
 
 use meta_signal_mentci::ComponentSocketKind;
 use signal_mentci::{
-    CriomeAccess, InterfaceInterest, InterfaceProjection, InterfaceStateObservation, MentciRequest,
-    PaneContent, ProjectedInterfaceState, QuestionProposal, RevisionCounter, SubscriberName,
-    SubscriptionToken,
+    ApprovalQuestion, CriomeAccess, InterfaceInterest, InterfaceProjection, InterfaceState,
+    InterfaceStateObservation, PaneContent, ProjectedInterfaceState, Query as MentciQuery,
+    QuestionProposal, RevisionCounter, SubscriberName, SubscriptionToken,
 };
 
 use crate::approval::{ApprovalModel, ApprovalView};
@@ -53,8 +53,8 @@ impl SocketObservation {
         self.token.as_ref()
     }
 
-    pub fn interest(&self) -> Option<InterfaceInterest> {
-        self.interest
+    pub fn interest(&self) -> Option<&InterfaceInterest> {
+        self.interest.as_ref()
     }
 
     pub fn latest(&self) -> Option<&ProjectedInterfaceState> {
@@ -69,7 +69,7 @@ impl SocketObservation {
     pub fn revision(&self) -> Option<RevisionCounter> {
         self.latest
             .as_ref()
-            .map(|state| state.revision_counter.clone())
+            .map(|state| state.revision_counter)
     }
 }
 
@@ -146,12 +146,12 @@ impl ObservationModel {
     pub fn on_user_event(&mut self, event: UserEvent) -> Vec<Cmd> {
         match event {
             UserEvent::Observe { socket, interest } => {
-                let slot = self.slot_mut(socket);
-                slot.interest = Some(interest);
+                let slot = self.slot_mut(socket.clone());
+                slot.interest = Some(interest.clone());
                 slot.liveness = SocketLiveness::Connecting;
                 vec![Cmd::send(
                     socket,
-                    MentciRequest::ObserveInterfaceState(InterfaceStateObservation {
+                    MentciQuery::ObserveInterfaceState(InterfaceStateObservation {
                         subscriber_name: self.subscriber.clone(),
                         interface_interest: interest,
                     }),
@@ -160,7 +160,7 @@ impl ObservationModel {
             UserEvent::RetractObservation { socket, token } => {
                 vec![Cmd::send(
                     socket,
-                    MentciRequest::RetractInterfaceObservation(token),
+                    MentciQuery::RetractInterfaceObservation(token),
                 )]
             }
             UserEvent::SelectQuestion { question } => {
@@ -180,7 +180,7 @@ impl ObservationModel {
                 if outcome.verdict().is_some() {
                     vec![Cmd::send(
                         ComponentSocketKind::Mentci,
-                        MentciRequest::AnswerQuestion(verdict),
+                        MentciQuery::AnswerQuestion(verdict),
                     )]
                 } else {
                     Vec::new()
@@ -189,11 +189,11 @@ impl ObservationModel {
             UserEvent::ProposeEditedAnswer { proposal } => {
                 vec![Cmd::send(
                     ComponentSocketKind::Mentci,
-                    MentciRequest::ProposeEditedAnswer(proposal),
+                    MentciQuery::ProposeEditedAnswer(proposal),
                 )]
             }
             UserEvent::PushQuestion { socket, proposal } => {
-                vec![Cmd::send(socket, MentciRequest::PresentQuestion(proposal))]
+                vec![Cmd::send(socket, MentciQuery::PresentQuestion(proposal))]
             }
         }
     }
@@ -203,7 +203,7 @@ impl ObservationModel {
     pub fn on_engine_event(&mut self, event: EngineEvent) -> Vec<Cmd> {
         match event {
             EngineEvent::ObservationOpened { socket, opened } => {
-                let slot = self.slot_mut(socket);
+                let slot = self.slot_mut(socket.clone());
                 slot.token = Some(opened.subscription_token);
                 slot.liveness = SocketLiveness::Connected;
                 self.fold_projection(socket, opened.projected_interface_state);
@@ -215,7 +215,7 @@ impl ObservationModel {
                 state,
             } => {
                 if self
-                    .socket(socket)
+                    .socket(socket.clone())
                     .and_then(|slot| slot.token.clone())
                     .as_ref()
                     != Some(&token)
@@ -256,22 +256,23 @@ impl ObservationModel {
                 })
                 .collect(),
             approval: self.approval.view(),
-            panes: self
+            pane: self
                 .socket(ComponentSocketKind::Mentci)
                 .and_then(|slot| slot.latest())
-                .map(Self::panes_from_projection)
-                .unwrap_or_default(),
+                .and_then(Self::full_projection)
+                .map(|state| state.pane_content.clone()),
             criome_access: self
                 .socket(ComponentSocketKind::Mentci)
                 .and_then(|slot| slot.latest())
-                .and_then(ProjectedInterfaceState::criome_access),
+                .and_then(Self::full_projection)
+                .map(|state| state.criome_access.clone()),
         }
     }
 
     /// Fold one projected state into a socket slot and refresh the approval
     /// cursor from its pending-question slice.
     fn fold_projection(&mut self, socket: ComponentSocketKind, state: ProjectedInterfaceState) {
-        let pending = state.pending_questions().to_vec();
+        let pending = Self::pending_from_projection(&state);
         self.slot_mut(socket).latest = Some(state);
         let _ = self.approval.absorb_pending(pending);
     }
@@ -282,25 +283,45 @@ impl ObservationModel {
             .or_default()
     }
 
-    fn panes_from_projection(state: &ProjectedInterfaceState) -> Vec<PaneContent> {
+    /// The full interface state a projection carries, if it carries one. Only
+    /// `FullProjection` does; the narrower projections say so by their shape.
+    fn full_projection(state: &ProjectedInterfaceState) -> Option<&InterfaceState> {
         match &state.interface_projection {
-            InterfaceProjection::FullProjection(state) => state.panes().to_vec(),
+            InterfaceProjection::FullProjection(state) => Some(state),
             InterfaceProjection::StatusProjection(_)
             | InterfaceProjection::NotificationProjection(_)
-            | InterfaceProjection::PendingQuestionsProjection(_) => Vec::new(),
+            | InterfaceProjection::PendingQuestionsProjection(_) => None,
+        }
+    }
+
+    /// The questions a projection puts before the operator. The contract
+    /// carries one question per projection, so this is at most one — a vector
+    /// because the approval cursor is written against a queue and a later
+    /// contract may widen it.
+    fn pending_from_projection(state: &ProjectedInterfaceState) -> Vec<ApprovalQuestion> {
+        match &state.interface_projection {
+            InterfaceProjection::FullProjection(state) => {
+                vec![state.approval_question.clone()]
+            }
+            InterfaceProjection::PendingQuestionsProjection(view) => {
+                vec![view.approval_question.clone()]
+            }
+            InterfaceProjection::StatusProjection(_)
+            | InterfaceProjection::NotificationProjection(_) => Vec::new(),
         }
     }
 }
 
 /// The per-frame snapshot a shell paints. Pure data, no GUI types.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ObservationView {
     /// One header row per observed component socket.
     pub sockets: Vec<SocketView>,
     /// The approval surface snapshot.
     pub approval: ApprovalView,
-    /// Open daemon-projected panes from the latest full Mentci observation.
-    pub panes: Vec<PaneContent>,
+    /// The daemon-projected pane from the latest full Mentci observation.
+    /// `None` until a full projection is folded.
+    pub pane: Option<PaneContent>,
     /// The criome access level mirrored from the mentci daemon's latest full
     /// projection. `None` until a full projection is folded; clients treat
     /// `None` as observation-only.

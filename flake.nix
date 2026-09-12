@@ -1,49 +1,63 @@
 {
-  description = "mentci-lib — heavy application logic for the mentci interaction surface";
+  description = "mentci-lib — the client observability and control model for the Mentci interaction surface";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    rust-build = {
-      url = "github:LiGoldragon/rust-build";
+    fenix = {
+      url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    crane.url = "github:ipetkov/crane";
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-build }:
+  outputs = { self, nixpkgs, flake-utils, fenix, crane }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
-        rust = rust-build.lib.${system}.fromToolchainFile pkgs {
-          file = ./rust-toolchain.toml;
-          sha256 = "sha256-gh/xTkxKHL4eiRXzWv8KP7vfjSk61Iq48x47BEDFgfk=";
-        };
-
-        inherit (rust) craneLib toolchain;
-        src = rust.cleanCargoSource ./.;
-        commonArgs = {
-          inherit src;
-          strictDeps = true;
-        };
+        toolchain = fenix.packages.${system}.complete.withComponents [
+          "cargo"
+          "rustc"
+          "rustfmt"
+          "clippy"
+          "rust-analyzer"
+          "rust-src"
+        ];
+        craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
+        src = craneLib.cleanCargoSource ./.;
+        commonArgs = { inherit src; strictDeps = true; };
         cargoArtifacts = craneLib.buildDepsOnly commonArgs;
       in
       {
-        packages.default = craneLib.buildPackage (commonArgs // {
-          inherit cargoArtifacts;
-        });
-
-        checks.default = craneLib.cargoTest (commonArgs // {
-          inherit cargoArtifacts;
-        });
-
+        packages.default = craneLib.buildPackage (commonArgs // { inherit cargoArtifacts; });
+        checks = {
+          build = craneLib.cargoBuild (commonArgs // { inherit cargoArtifacts; });
+          test = craneLib.cargoTest (commonArgs // { inherit cargoArtifacts; });
+          test-contract = craneLib.cargoTest (commonArgs // {
+            inherit cargoArtifacts;
+            cargoTestExtraArgs = "--test contract";
+          });
+          test-datom = craneLib.cargoTest (commonArgs // {
+            inherit cargoArtifacts;
+            cargoTestExtraArgs = "--all-features --test contract";
+          });
+          test-doc = craneLib.cargoTest (commonArgs // {
+            inherit cargoArtifacts;
+            cargoTestExtraArgs = "--doc";
+          });
+          doc = craneLib.cargoDoc (commonArgs // {
+            inherit cargoArtifacts;
+            RUSTDOCFLAGS = "-D warnings";
+          });
+          fmt = craneLib.cargoFmt { inherit src; };
+          clippy = craneLib.cargoClippy (commonArgs // {
+            inherit cargoArtifacts;
+            cargoClippyExtraArgs = "--all-targets --all-features -- -D warnings";
+          });
+        };
         devShells.default = pkgs.mkShell {
           name = "mentci-lib";
-          packages = [
-            pkgs.jujutsu
-            pkgs.pkg-config
-            toolchain
-          ];
+          packages = [ pkgs.jujutsu toolchain ];
         };
-      }
-    );
+      });
 }

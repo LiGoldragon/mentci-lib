@@ -14,7 +14,7 @@
 //!   proposals, expressed over `signal-mentci`'s OWN approval vocabulary
 //!   (`ApprovalQuestion` / `ApprovalDecision` / `ApprovalVerdict` /
 //!   `AnswerProposal`), never a duplicate.
-//! - [`render::RenderDotos`] — the DOTOS-fallback renderer (the
+//! - [`render::RenderDatom`] — the Datom-fallback renderer (the
 //!   render-typed-replies-and-unknown-objects behavior).
 //! - [`decision::CriomeVerdict`] — the closed-decision -> criome verdict
 //!   mapping (Spirit t00s), consuming the real `signal-criome` /
@@ -46,4 +46,4 @@ pub use event::{EngineEvent, SocketLiveness, UserEvent};
 pub use observation::{
     ObservationModel, ObservationView, PresentableQuestion, SocketObservation, SocketView,
 };
-pub use render::{RenderDotos, RenderOrigin, RenderedObject};
+pub use render::{RenderDatom, RenderOrigin, RenderedObject};

@@ -1,32 +1,31 @@
 [package]
 name         = "mentci-lib"
-version      = "0.3.1"
+version      = "1.0.0"
 edition      = "2024"
 rust-version = "1.89"
 license      = "MIT OR Apache-2.0"
 repository   = "https://github.com/LiGoldragon/mentci-lib"
-description  = "mentci-lib — the client observability + control model for the mentci programmable-UI component. Owns the MVU-shaped ObservationModel keyed by component socket, the approval state machine over signal-mentci's vocabulary, the edits-as-proposals flow, the DOTOS-fallback renderer, and the typed closed-decision -> criome verdict mapping."
+description  = "mentci-lib — the client observability + control model for the mentci programmable-UI component. Owns the MVU-shaped ObservationModel keyed by component socket, the approval state machine over signal-mentci's vocabulary, the edits-as-proposals flow, the Datom-fallback renderer, and the typed closed-decision -> criome verdict mapping."
 
 [dependencies]
-signal-mentci      = { git = "https://github.com/LiGoldragon/signal-mentci.git", rev = "293ea752ae1acb56f7977bcee4032fb714b150e7" }
-signal-frame       = { git = "https://github.com/LiGoldragon/signal-frame.git", rev = "80f70d929ae6d72707052f097be2264872913983", default-features = false }
-meta-signal-mentci = { git = "https://github.com/LiGoldragon/meta-signal-mentci.git", rev = "b063a33d93fbe86e7423edcc4897f534047fb1a9" }
-signal-criome      = { git = "https://github.com/LiGoldragon/signal-criome.git", rev = "b85fe3408faa24b8439a3685396430a68bfbcb71" }
-meta-signal-criome = { git = "https://github.com/LiGoldragon/meta-signal-criome.git", rev = "5acfedafd63964da1a4d1082245f3943c6d371b5" }
-dotos         = { package = "dotos", git = "https://github.com/LiGoldragon/dotos.git", rev = "b3c2c76fe7a18ba026ab054d1fa7162e55860b9e", optional = true }
+signal-mentci      = { git = "https://github.com/LiGoldragon/signal-mentci", rev = "0bb230511a145dd44efb775a0e1958462853bf12" }
+meta-signal-mentci = { git = "https://github.com/LiGoldragon/meta-signal-mentci", rev = "f491134e6b7b0ae5ddab6be978178a9d6d29198c" }
+signal-criome      = { git = "https://github.com/LiGoldragon/signal-criome", rev = "5bfa61b59503a26622dea6c73f3131a0a30d4dba" }
+meta-signal-criome = { git = "https://github.com/LiGoldragon/meta-signal-criome", rev = "3393501c0e414516867dd31c20f664bd82abffc7" }
+datom-codec        = { git = "https://github.com/LiGoldragon/datom-codec", rev = "6dccc76b75918a91d3370a9d4fe88aa7dd567876", optional = true }
+protos             = { git = "https://github.com/LiGoldragon/protos", rev = "171b21f65337983ab624b7b906397a4f1f92c5a3", optional = true }
 thiserror          = "2"
 
 [features]
-default     = []
-# DOTOS projection of typed payloads (the render-typed-replies-and-unknown-
-# objects behavior). Pulls the optional DOTOS codec through every contract.
-dotos-text = [
-  "dep:dotos",
-  "signal-frame/dotos-text",
-  "signal-mentci/dotos-text",
-  "meta-signal-mentci/dotos-text",
-  "signal-criome/dotos-text",
-  "meta-signal-criome/dotos-text",
+default = []
+# The Datom text projection of typed payloads, pulled through every contract.
+datom = [
+  "dep:datom-codec",
+  "dep:protos",
+  "signal-mentci/datom",
+  "meta-signal-mentci/datom",
+  "signal-criome/datom",
+  "meta-signal-criome/datom",
 ]
 
 [lints.rust]

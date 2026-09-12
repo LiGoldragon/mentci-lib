@@ -3,17 +3,17 @@
 //! property: `update` is a pure function of `(state, event) -> (state,
 //! Vec<Cmd>)`.
 //!
-//! Every command carries a live `signal-mentci` request (`MentciRequest`)
+//! Every command carries a live `signal-mentci` request (`MentciQuery`)
 //! addressed to a component socket; the runtime owns the transport that turns
 //! it into a `signal-frame` `MentciFrame`. The model never speaks the wire
 //! itself.
 
 use meta_signal_mentci::ComponentSocketKind;
-use signal_mentci::MentciRequest;
+use signal_mentci::Query as MentciQuery;
 
 /// One side-effect to dispatch. The runtime executes these; the model only
 /// describes them.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Cmd {
     /// Send a `signal-mentci` request to a component socket. The runtime
     /// frames it (`MentciFrame::new(MentciFrameBody::Request { .. })`), dials
@@ -21,13 +21,13 @@ pub enum Cmd {
     /// the reply as a [`crate::event::EngineEvent`].
     SendRequest {
         socket: ComponentSocketKind,
-        request: MentciRequest,
+        request: MentciQuery,
     },
 }
 
 impl Cmd {
     /// Build a [`Cmd::SendRequest`] addressed to a component socket.
-    pub fn send(socket: ComponentSocketKind, request: MentciRequest) -> Self {
+    pub fn send(socket: ComponentSocketKind, request: MentciQuery) -> Self {
         Self::SendRequest { socket, request }
     }
 }

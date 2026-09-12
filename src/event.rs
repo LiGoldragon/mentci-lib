@@ -18,7 +18,7 @@ use signal_mentci::{
 
 /// What a shell forwards when the psyche does something. Each variant maps to
 /// a `signal-mentci` request the model turns into a [`crate::cmd::Cmd`].
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum UserEvent {
     /// Open a projected-state observation on a component socket with a chosen
     /// interest. The daemon mints the token; the model records it on the open
@@ -52,7 +52,7 @@ pub enum UserEvent {
 /// What the runtime raises when something arrives from a daemon connection.
 /// Replies and pushes are carried as the live `signal-mentci` reply / event
 /// shapes; the model folds them into per-socket projected state.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum EngineEvent {
     /// A daemon accepted an observation and returned its minted token plus the
     /// opening projected snapshot.

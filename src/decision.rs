@@ -19,7 +19,7 @@ use signal_mentci::ApprovalDecision;
 /// parked, and the closed decision projected into criome's authorization
 /// vocabulary. The runtime wraps this in
 /// `meta_signal_criome::Input::SubmitAuthorizationApproval`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CriomeVerdict {
     request_slot: AuthorizationRequestSlot,
     decision: AuthorizationApprovalDecision,
@@ -43,8 +43,8 @@ impl CriomeVerdict {
         &self.request_slot
     }
 
-    pub fn decision(&self) -> AuthorizationApprovalDecision {
-        self.decision
+    pub fn decision(&self) -> &AuthorizationApprovalDecision {
+        &self.decision
     }
 }
 
@@ -52,7 +52,7 @@ impl CriomeVerdict {
 /// `signal-mentci`'s closed verdict set and `meta-signal-criome`'s
 /// authorization decision set. Owning the `From` here keeps the two-enum
 /// match in exactly one place.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CriomeDecision(AuthorizationApprovalDecision);
 
 impl CriomeDecision {

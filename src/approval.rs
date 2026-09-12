@@ -120,7 +120,7 @@ impl ApprovalSubscription {
 }
 
 /// One approval-state update the model fans out to local subscribers.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ApprovalUpdate {
     Snapshot(ApprovalView),
     QuestionReceived(ApprovalQuestion),
@@ -129,7 +129,7 @@ pub enum ApprovalUpdate {
 }
 
 /// One update routed to one local subscriber.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ApprovalDelivery {
     subscription: ApprovalSubscriptionIdentifier,
     client: ApprovalClientIdentifier,
@@ -164,7 +164,7 @@ impl ApprovalDelivery {
 
 /// Receipt returned when a local client subscribes: the subscription plus the
 /// snapshot it opens with.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ApprovalSubscriptionReceipt {
     subscription: ApprovalSubscription,
     snapshot: ApprovalView,
@@ -182,7 +182,7 @@ impl ApprovalSubscriptionReceipt {
 
 /// The result of answering: the question removed from the queue (if any) plus
 /// the deliveries the verdict generated.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ApprovalAnswerOutcome {
     answered: Option<ApprovalQuestion>,
     verdict: Option<ApprovalVerdict>,
@@ -400,7 +400,7 @@ impl ApprovalModel {
 }
 
 /// Pure-data approval snapshot a shell paints.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ApprovalView {
     pub current: Option<ApprovalQuestion>,
     pub pending_count: usize,
